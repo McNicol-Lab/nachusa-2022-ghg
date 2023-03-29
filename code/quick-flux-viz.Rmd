@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/cloud/project")
 ```
 
 ```{r}
@@ -14,14 +15,14 @@ library(tidyverse)
 ```
 
 ```{r}
-files <- list.files("data/tidy/", pattern = "ppm")
-data <- lapply(paste0("data/tidy/", files), read_csv) %>% bind_rows()
+files <- list.files("data/", pattern = "ppm")
+data <- lapply(paste0("data/", files), read_csv) %>% bind_rows()
 data
 ```
 
 ```{r}
 data %>% 
-  filter(ch4_ppm < 6) %>% 
+  #filter(ch4_ppm < 6) %>% 
   # filter(ecosystem == "NW", timepoint != "t3") %>% 
   mutate(min_elapsed = case_when(
     timepoint == "t0" ~ 0,
