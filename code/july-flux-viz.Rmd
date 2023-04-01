@@ -16,7 +16,7 @@ library(ggh4x)
 ```
 
 ```{r read-files, message=F, include = F}
-fluxes <- read_csv("data/220712_fluxes.csv")
+fluxes_july <- read_csv("data/220712/220712_fluxes.csv")
 ancillary <- read_csv("data/nachusa-soil-temp-moisture.csv")
 ```
 
@@ -41,9 +41,9 @@ moisture_july <- ancillary %>%
     )) %>%
   select(c(4,11,9))
 
-full_data <- left_join(fluxes, moisture_july, by = c("ecosystem", "rep"))
+full_data_july <- left_join(fluxes_july, moisture_july, by = c("ecosystem", "rep"))
 
-full_data <- full_data %>%
+full_data_july <- full_data_july %>%
   rowwise() %>%
   mutate(soil_moisture = list(case_when(
     ecosystem == "BP" & (rep>=1 & rep <=4) ~ 6.8,
@@ -69,23 +69,23 @@ full_data <- full_data %>%
 ```
 
 ```{r read-ppm-data, message=F,include=F}
-ppm_data<-bind_rows(read_csv("data/220712_t0_ghg_ppm.csv"),
-          read_csv("data/220712_t1_ghg_ppm.csv"),
-          read_csv("data/220712_t2_ghg_ppm.csv"),
-          read_csv("data/220712_t3_ghg_ppm.csv"),
-          read_csv("data/220712_t4_ghg_ppm.csv"))
+ppm_data_july<-bind_rows(read_csv("data/220712/220712_t0_ghg_ppm.csv"),
+          read_csv("data/220712/220712_t1_ghg_ppm.csv"),
+          read_csv("data/220712/220712_t2_ghg_ppm.csv"),
+          read_csv("data/220712/220712_t3_ghg_ppm.csv"),
+          read_csv("data/220712/220712_t4_ghg_ppm.csv"))
 ```
 
 ```{r find-weird-ch4-flux, include=F}
-full_data %>%
+full_data_july %>%
   filter(gas == "ch4", flux>8)
 
-ppm_data %>%
+ppm_data_july %>%
   filter(ecosystem == "BP", rep == 8)
 ```
 
 ```{r ppm-viz, echo=F}
-ppm_data %>%
+ppm_data_july %>%
   filter(ch4_ppm<9) %>% 
   #group_by(ecosystem) %>%
   filter(ecosystem == "WW") %>%
@@ -97,34 +97,34 @@ ppm_data %>%
 
 
 ```{r flux-viz, echo=F}
-full_data %>% 
+full_data_july %>% 
   filter(gas == "ch4") %>%
-  filter((ecosystem != "BP" & rep != 8)) %>%
+  filter(case_when(ecosystem != "BP" ~ T, rep != 8 ~ T)) %>%
   ggplot(aes(x = soil_moisture, y = flux, color = factor(rep))) +
   geom_point() +
-  labs(title = "CH4 fluxes vs. Gravimetric Soil Water Content", y = "Flux (μg CH4 m-2 d-1)", x = "Water Content (%)") +
+  labs(title = "CH4 fluxes_july vs. Gravimetric Soil Water Content", y = "Flux (μg CH4 m-2 d-1)", x = "Water Content (%)") +
   facet_wrap(~ecosystem) +
   guides(color = guide_legend(title = "Chamber ID"))
 
-full_data %>% 
+full_data_july %>% 
   filter(gas == "n2o") %>%
   ggplot(aes(x = soil_moisture, y = flux, color = factor(rep))) +
   geom_point() +
-  labs(title = "N2O fluxes vs. Gravimetric Soil Water Content", y = "Flux (μg N2O m-2 d-1)", x = "Water Content (%)") +
+  labs(title = "N2O fluxes_july vs. Gravimetric Soil Water Content", y = "Flux (μg N2O m-2 d-1)", x = "Water Content (%)") +
   facet_wrap(~ecosystem) +
   guides(color = guide_legend(title = "Chamber ID"))
 
-full_data %>% 
+full_data_july %>% 
   filter(gas == "co2") %>%
   ggplot(aes(x = soil_moisture, y = flux, color = factor(rep))) +
   geom_point() +
-  labs(title = "CO2 fluxes vs. Gravimetric Soil Water Content", y = "Flux (mg CO2 m-2 d-1)", x = "Water Content (%)") +
+  labs(title = "CO2 fluxes_july vs. Gravimetric Soil Water Content", y = "Flux (mg CO2 m-2 d-1)", x = "Water Content (%)") +
   facet_wrap(~ecosystem) +
   guides(color = guide_legend(title = "Chamber ID"))
 ```
 
 ```{r moisture-viz, warning=F, echo=F}
-full_data %>% 
+full_data_july %>% 
   filter(gas == "ch4", p.value < .05) %>%
   ggplot(aes(x = soil_moisture, y = p.value, color = factor(rep))) +
   geom_point() +
@@ -133,7 +133,7 @@ full_data %>%
   guides(color = guide_legend(title = "Chamber ID")) +
   scale_y_reverse()
 
-full_data %>% 
+full_data_july %>% 
   filter(gas == "n2o", p.value < .05) %>%
   ggplot(aes(x = soil_moisture, y = p.value, color = factor(rep))) +
   geom_point() +
@@ -142,7 +142,7 @@ full_data %>%
   guides(color = guide_legend(title = "Chamber ID")) +
   scale_y_reverse()
 
-full_data %>% 
+full_data_july %>% 
   filter(gas == "co2", p.value < .05) %>%
   ggplot(aes(x = soil_moisture, y = p.value, color = factor(rep))) +
   geom_point() +

@@ -1,0 +1,305 @@
+---
+title: "July and August Summary Stats and Visualization"
+author: "Michael Yonker"
+date: "3/31/23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/cloud/project")
+```
+
+```{r load-packages, message= F, include=F}
+library(tidyverse)
+library(ggh4x)
+```
+
+```{r read-files, message=F, include = F}
+fluxes_aug <- read_csv("data/220818/220818_fluxes.csv")
+fluxes_july <- read_csv("data/220712/220712_fluxes.csv")
+ancillary <- read_csv("data/nachusa-soil-temp-moisture.csv")
+```
+
+```{r data-wrangling-aug, include = F}
+moisture_aug <- ancillary %>%
+  filter(date == "2022-08-18") %>%
+  mutate(ecosystem = case_when(
+    site == "big_bowl" ~ "BP",
+    site == "small_bowl" ~ "SP",
+    site == "east" ~ "EW",
+    site == "west" ~ "WW",
+    site == "north" ~ "NW",
+    site == "south" ~ "SW"
+    )) %>%
+  mutate(rep = chamber) %>%
+  select(c(4,11,9,10))
+
+full_data_aug <- left_join(fluxes_aug, moisture_aug, by = c("ecosystem", "rep"))
+
+```
+
+```{r data-wrangling-july, include = F}
+moisture_july <- ancillary %>%
+  filter(date == "2022-07-12") %>%
+  mutate(ecosystem = case_when(
+    site == "big_bowl" ~ "BP",
+    site == "small_bowl" ~ "SP",
+    site == "east" ~ "EW",
+    site == "west" ~ "WW",
+    site == "north" ~ "NW",
+    site == "south" ~ "SW"
+    )) %>%
+  mutate(rep = case_when(
+    transect == "high" ~ 1,
+    transect == "mid" ~ 5,
+    transect == "low" ~ 9,
+    transect == 1 ~ 1,
+    transect == 2 ~ 5,
+    transect == 3 ~ 9
+    )) %>%
+  select(c(4,11,9))
+
+full_data_july <- left_join(fluxes_july, moisture_july, by = c("ecosystem", "rep"))
+
+full_data_july <- full_data_july %>%
+  rowwise() %>%
+  mutate(soil_moisture = list(case_when(
+    ecosystem == "BP" & (rep>=1 & rep <=4) ~ 6.8,
+    ecosystem == "BP" & (rep>=5 & rep <=8) ~ 8.7,
+    ecosystem == "BP" & (rep>=9 & rep <=12) ~ 14.9,
+    ecosystem == "EW" & (rep>=1 & rep <=4) ~ 15.9,
+    ecosystem == "EW" & (rep>=5 & rep <=8) ~ 14.0,
+    ecosystem == "EW" & (rep>=9 & rep <=12) ~ 14.4,
+    ecosystem == "NW" & (rep>=1 & rep <=4) ~ 12.9,
+    ecosystem == "NW" & (rep>=5 & rep <=8) ~ 3.7,
+    ecosystem == "NW" & (rep>=9 & rep <=12) ~ 15.1,
+    ecosystem == "SP" & (rep>=1 & rep <=4) ~ 3.9,
+    ecosystem == "SP" & (rep>=5 & rep <=8) ~ 13.3,
+    ecosystem == "SP" & (rep>=9 & rep <=12) ~ 12.6,
+    ecosystem == "SW" & (rep>=1 & rep <=4) ~ 42.2,
+    ecosystem == "SW" & (rep>=5 & rep <=8) ~ 23.4,
+    ecosystem == "SW" & (rep>=9 & rep <=12) ~ 7.9,
+    ecosystem == "WW" & (rep>=1 & rep <=4) ~ 15.4,
+    ecosystem == "WW" & (rep>=5 & rep <=8) ~ 6.8,
+    ecosystem == "WW" & (rep>=9 & rep <=12) ~ 10.8
+  ))) %>%
+  mutate(soil_moisture = as.numeric(soil_moisture))
+```
+
+```{r flux-summary, message=F}
+july_aug_full_data <- bind_rows(full_data_july, full_data_aug)
+
+july_aug_full_data %>%
+  group_by(ecosystem, gas) %>%
+  summarize(mean = mean(flux), st_dev = sd(flux))
+```
+
+```{r plot-fluxes, fig.height=7, echo = F, message=F}
+july_aug_full_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date.x) +
+  labs(title = "Carbon dioxide fluxes by ecosystem")
+
+july_aug_full_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(ecosystem, flux)) +
+  geom_boxplot() +
+  facet_wrap(~date.x) +
+  labs(title = "Carbon dioxide boxplots")
+
+july_aug_full_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date.x) +
+  labs(title = "Methane fluxes by ecosystem")
+
+july_aug_full_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(ecosystem, flux)) +
+  geom_boxplot() +
+  facet_wrap(~date.x) +
+  labs(title = "Methane boxplots")
+
+july_aug_full_data %>%
+  filter(gas == "n2o") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date.x)+
+  labs(title = "Nitrous oxide fluxes by ecosystem")
+
+july_aug_full_data %>%
+  filter(gas == "n2o") %>%
+  ggplot(aes(ecosystem, flux)) +
+  geom_boxplot() +
+  facet_wrap(~date.x)+
+  labs(title = "Nitrous oxide boxplots")
+```
+
+```{r remove-potential-outliers, include=F}
+july_aug_modified_data <-
+  july_aug_full_data %>%
+  filter(case_when(date.x != "220712" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "EW" ~ T,
+                   rep != 2 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "EW" ~ T,
+                   rep != 3 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "NW" ~ T,
+                   rep != 3 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "SW" ~ T,
+                   rep != 9 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "WW" ~ T,
+                   rep != 7 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "WW" ~ T,
+                   rep != 4 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "co2" ~ T,
+                   ecosystem != "SW" ~ T,
+                   rep != 12 ~T),
+         
+         case_when(date.x != "220712" ~ T,
+                   gas != "ch4" ~ T,
+                   ecosystem != "BP" ~ T,
+                   rep != 8 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "ch4" ~ T,
+                   ecosystem != "EW" ~ T,
+                   rep != 2 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "ch4" ~ T,
+                   ecosystem != "EW" ~ T,
+                   rep != 8 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "ch4" ~ T,
+                   ecosystem != "NW" ~ T,
+                   rep != 9 ~T),
+         
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "BP" ~ T,
+                   rep != 1 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "BP" ~ T,
+                   rep != 2 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "BP" ~ T,
+                   rep != 9 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "EW" ~ T,
+                   rep != 8 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "NW" ~ T,
+                   rep != 8 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "NW" ~ T,
+                   rep != 5 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "SP" ~ T,
+                   rep != 4 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "SP" ~ T,
+                   rep != 10 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "SW" ~ T,
+                   rep != 8 ~T),
+         case_when(date.x != "220712" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "SW" ~ T,
+                   rep != 3 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "EW" ~ T,
+                   rep != 6 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "SP" ~ T,
+                   rep != 6 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "SP" ~ T,
+                   rep != 9 ~T),
+         case_when(date.x != "220818" ~ T,
+                   gas != "n2o" ~ T,
+                   ecosystem != "WW" ~ T,
+                   rep != 1 ~T),
+         
+  )
+```
+
+```{r flux-summary-modified, message=F}
+july_aug_modified_data %>%
+  group_by(ecosystem, gas) %>%
+  summarize(mean = mean(flux), st_dev = sd(flux))
+```
+
+```{r plot-fluxes-modified, fig.height=7, echo = F, message=F}
+july_aug_modified_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date.x) +
+  labs(title = "Carbon dioxide fluxes by ecosystem")
+
+july_aug_modified_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(ecosystem, flux)) +
+  geom_boxplot() +
+  facet_wrap(~date.x) +
+  labs(title = "Carbon dioxide boxplots")
+
+july_aug_modified_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date.x) +
+  labs(title = "Methane fluxes by ecosystem")
+
+july_aug_modified_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(ecosystem, flux)) +
+  geom_boxplot() +
+  facet_wrap(~date.x) +
+  labs(title = "Methane boxplots")
+
+july_aug_modified_data %>%
+  filter(gas == "n2o") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date.x)+
+  labs(title = "Nitrous oxide fluxes by ecosystem")
+
+july_aug_modified_data %>%
+  filter(gas == "n2o") %>%
+  ggplot(aes(ecosystem, flux)) +
+  geom_boxplot() +
+  facet_wrap(~date.x)+
+  labs(title = "Nitrous oxide boxplots")
+```
