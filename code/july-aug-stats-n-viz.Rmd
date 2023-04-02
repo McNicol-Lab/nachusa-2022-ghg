@@ -92,7 +92,24 @@ july_aug_full_data <- bind_rows(full_data_july, full_data_aug)
 
 july_aug_full_data %>%
   group_by(ecosystem, gas) %>%
-  summarize(mean = mean(flux), st_dev = sd(flux))
+  summarize(mean = mean(flux), st_dev = sd(flux)) %>% 
+  ungroup() %>% 
+  group_by(gas) %>% 
+  arrange(desc(mean))
+```
+```{r flux-summary-by-month, message = F}
+july_aug_full_data %>%
+  group_by(ecosystem, gas, factor(date.x)) %>%
+  summarize(mean = mean(flux), st_dev = sd(flux)) %>% 
+  ungroup() %>% 
+  group_by(`factor(date.x)`, gas) %>% 
+  arrange(desc(mean))
+```
+
+```{r overall-mean-fluxes, message = F}
+july_aug_full_data %>% 
+  group_by(gas, factor(date.x)) %>% 
+  summarize(mean = mean(flux), st_dev = sd(flux)) 
 ```
 
 ```{r plot-fluxes, fig.height=7, echo = F, message=F}
