@@ -268,55 +268,151 @@ july_aug_modified_data <-
   )
 ```
 
+```{r reorder-ecosystems, warning=FALSE, message = F, echo = F}
+
+july_aug_modified_data <- july_aug_modified_data %>%
+  mutate(ecosystem = fct_relevel(ecosystem, levels = c(
+                                 "SP",
+                                 "BP",
+                                 "EW",
+                                 "WW",
+                                 "NW",
+                                 "SW")))
+```
+
+
 ```{r flux-summary-modified, message=F}
 july_aug_modified_data %>%
   group_by(ecosystem, gas) %>%
   summarize(mean = mean(flux), st_dev = sd(flux))
 ```
 
-```{r plot-fluxes-modified, fig.height=7, echo = F, message=F}
+```{r plot-fluxes-modified, echo=F, message=FALSE}
+eco.labs <- c("Small Prairie", "Big Prairie", "East Woodlands", "West Woodlands", "North Wetlands", "South Wetlands")
+names(eco.labs) <- c("SP", "BP", "EW", "WW", "NW", "SW")
+date.labs <- c("7/12/2022","8/18/2022")
+names(date.labs) <- c("220712", "220818")
+
 july_aug_modified_data %>%
   filter(gas == "co2") %>%
   ggplot(aes(rep, flux)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_grid(ecosystem~date.x) +
-  labs(title = "Carbon dioxide fluxes by ecosystem")
+  facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
+  labs(title = "CO2 fluxes by ecosystem", y = "Flux (mg CO2 m-2 d-1)", x = "Chamber ID") +
+  scale_x_continuous(breaks = c(1,5,9,12))
+ggsave("plots/co2_fluxes.png", width = 5, height = 9)
 
 july_aug_modified_data %>%
   filter(gas == "co2") %>%
-  ggplot(aes(ecosystem, flux)) +
-  geom_boxplot() +
-  facet_wrap(~date.x) +
-  labs(title = "Carbon dioxide boxplots")
+  ggplot(aes(x = gas, y = flux)) +
+  geom_violin() +
+  facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
+  labs(title = "CO2 boxplots", y = "Flux (mg CO2 m-2 d-1)", x = "") +
+  theme(axis.text.x = element_blank()) 
+ggsave("plots/co2_violins.png", width = 3, height = 9)
 
 july_aug_modified_data %>%
   filter(gas == "ch4") %>%
   ggplot(aes(rep, flux)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_grid(ecosystem~date.x) +
-  labs(title = "Methane fluxes by ecosystem")
+  facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
+  labs(title = "CH4 fluxes by ecosystem", y = "Flux (mug CH4 m-2 d-1)", x = "Chamber ID") +
+  scale_x_continuous(breaks = c(1,5,9,12))
+ggsave("plots/ch4_fluxes.png", width = 5, height = 9)
 
 july_aug_modified_data %>%
   filter(gas == "ch4") %>%
-  ggplot(aes(ecosystem, flux)) +
-  geom_boxplot() +
-  facet_wrap(~date.x) +
-  labs(title = "Methane boxplots")
+  ggplot(aes(gas, flux)) +
+  geom_violin() +
+  facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
+  labs(title = "CH4 boxplots", y = "Flux (mug CH4 m-2 d-1)", x="") +
+  theme(axis.text.x = element_blank()) 
+ggsave("plots/ch4_violins.png", width = 3, height = 9)
 
 july_aug_modified_data %>%
   filter(gas == "n2o") %>%
   ggplot(aes(rep, flux)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  facet_grid(ecosystem~date.x)+
-  labs(title = "Nitrous oxide fluxes by ecosystem")
+  facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
+  labs(title = "N2O fluxes by ecosystem", y = "Flux (mug N2O m-2 d-1)", x = "Chamber ID") +
+  scale_x_continuous(breaks = c(1,5,9,12))
+ggsave("plots/n2o_fluxes.png", width = 5, height = 9)
 
 july_aug_modified_data %>%
   filter(gas == "n2o") %>%
-  ggplot(aes(ecosystem, flux)) +
-  geom_boxplot() +
-  facet_wrap(~date.x)+
-  labs(title = "Nitrous oxide boxplots")
+  ggplot(aes(gas, flux)) +
+  geom_violin() +
+  facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
+  labs(title = "N2O boxplots", y = "Flux (mug N2O m-2 d-1)", x="") +
+  theme(axis.text.x = element_blank()) 
+ggsave("plots/n2o_violins.png", width = 3, height = 9)
+
+july_aug_modified_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(soil_moisture, flux, color = ecosystem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, color = "black") +
+  facet_grid(.~date.x, labeller = labeller(date.x = date.labs)) +
+  labs(title = "CO2 Fluxes vs. Soil Water Content", y = "Flux (mg CO2 m-2 d-1)", x = "Water Content (%)") +
+  scale_color_discrete(labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))
+ggsave("plots/co2_flux_n_moisture.png", width = 7, height = 5)
+
+july_aug_modified_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(soil_moisture, flux, color = ecosystem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, color = "black") +
+  facet_grid(.~date.x, labeller = labeller(date.x = date.labs)) +
+  labs(title = "CH4 Fluxes vs. Soil Water Content", y = "Flux (mug CH4 m-2 d-1)", x = "Water Content (%)") +
+  scale_color_discrete(labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))
+ggsave("plots/ch4_flux_n_moisture.png", width = 7, height = 5)
+
+july_aug_modified_data %>%
+  filter(gas == "n2o") %>%
+  ggplot(aes(soil_moisture, flux, color = ecosystem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, color = "black") +
+  facet_grid(.~date.x, labeller = labeller(date.x = date.labs)) +
+  labs(title = "N2O Fluxes vs. Soil Water Content", y = "Flux (mug N2O m-2 d-1)", x = "Water Content (%)") +
+  scale_color_discrete(labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))
+ggsave("plots/n2o_flux_n_moisture.png", width = 7, height = 5)
+
+july_aug_modified_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(average_temp_kelvin, flux, color = ecosystem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, color = "black") +
+  facet_grid(.~date.x, labeller = labeller(date.x = date.labs)) +
+  labs(title = "CO2 Fluxes vs. Average Temperature", y = "Flux (mg CO2 m-2 d-1)", x = "Temperature (K)") +
+  scale_color_discrete(labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))
+ggsave("plots/co2_flux_n_temp.png", width = 7, height = 5)
+
+july_aug_modified_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(average_temp_kelvin, flux, color = ecosystem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, color = "black") +
+  facet_grid(.~date.x, labeller = labeller(date.x = date.labs)) +
+  labs(title = "CH4 Fluxes vs. Average Temperature", y = "Flux (mug CH4 m-2 d-1)", x = "Temperature (K)") +
+  scale_color_discrete(labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))
+ggsave("plots/ch4_flux_n_temp.png", width = 7, height = 5)
+
+july_aug_modified_data %>%
+  filter(gas == "n2o") %>%
+  ggplot(aes(average_temp_kelvin, flux, color = ecosystem)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F, color = "black") +
+  facet_grid(.~date.x, labeller = labeller(date.x = date.labs)) +
+  labs(title = "N2O Fluxes vs. Average Temperature", y = "Flux (mug N2O m-2 d-1)", x = "Temperature (K)") +
+  scale_color_discrete(labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))
+ggsave("plots/n2o_flux_n_temp.png", width = 7, height = 5)
 ```
