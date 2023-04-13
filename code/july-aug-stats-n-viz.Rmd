@@ -432,8 +432,8 @@ ggsave("plots/ch4_flux_n_moisture.png", width = 7, height = 5)
 # ggsave("plots/n2o_flux_n_moisture.png", width = 7, height = 5)
 
 july_aug_modified_data %>%
-  filter(gas == "co2") %>%
-  ggplot(aes(average_temp_kelvin, flux, color = ecosystem)) +
+  filter(gas == "co2", date.x = "8/18/2022") %>%
+  ggplot(aes(soil_temperature, flux, color = ecosystem)) +
   geom_point() +
   geom_smooth(method = "lm", color = "black") +
   facet_grid(.~date.x) +
@@ -444,8 +444,8 @@ july_aug_modified_data %>%
 ggsave("plots/co2_flux_n_temp.png", width = 7, height = 5)
 
 july_aug_modified_data %>%
-  filter(gas == "ch4") %>%
-  ggplot(aes(average_temp_kelvin, flux, color = ecosystem)) +
+  filter(gas == "ch4", date.x = "8/18/2022") %>%
+  ggplot(aes(soil_temperature, flux, color = ecosystem)) +
   geom_point() +
   geom_smooth(method = "lm", color = "black") +
   facet_grid(.~date.x) +
