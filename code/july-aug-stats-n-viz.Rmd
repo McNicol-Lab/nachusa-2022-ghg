@@ -336,9 +336,11 @@ july_aug_modified_data %>%
   ggplot(aes(x = factor(date.x), y = flux)) +
   geom_violin() +
   facet_grid(.~gas, labeller = labeller(gas = gas.labs)) +
-  labs(title = "GHG fluxes across sampling dates", x = "Date", y = "Flux (mg/mug GHG m-2 d-1)")+
+  labs(title = "GHG fluxes across sampling dates", x = "Date", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
   theme_bw()
 ggsave("plots/ghg_violins.png")
+
+# expression("Net CO"[2]*" Flux (nmol m"^{-2}*" s"^{-1}*")"))
 
 july_aug_modified_data %>%
   filter(ecosystem != "SW") %>%
