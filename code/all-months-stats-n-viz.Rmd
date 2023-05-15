@@ -12,8 +12,10 @@ knitr::opts_knit$set(root.dir = "/cloud/project")
 
 ```{r load-packages, message= F, include=F}
 library(tidyverse)
+library(tidymodels)
 library(ggh4x)
 library(lubridate)
+
 ```
 
 ```{r read-files, message=F, include = F}
@@ -55,18 +57,18 @@ full_data <- full_data %>%
 
 full_data <- full_data %>%
   select(1:5,17:22)%>%
-  mutate(ecosystem = fct_relevel(ecosystem, levels = c(
+  mutate(ecosystem = fct_relevel(ecosystem, c(
                                  "SP",
                                  "BP",
                                  "EW",
                                  "WW",
                                  "NW",
                                  "SW")),
-         gas = fct_relevel(gas, levels = c(
+         gas = fct_relevel(gas, c(
                                  "co2",
                                  "ch4",
                                  "n2o")),
-         transect = fct_relevel(transect, levels = c("high",
+         transect = fct_relevel(transect, c("high",
                                                      "mid",
                                                      "low"))) 
 ```
@@ -193,23 +195,11 @@ mod_data %>%
   summarize(mean = mean(flux), st_dev = sd(flux))
 ```
 
-```{r plot-fluxes-modified, echo=F, message=FALSE}
+```{r plot-fluxes-modified, echo=F, message=FALSE, eval = F}
 eco.labs <- c("Small Prairie", "Big Prairie", "East Woodlands", "West Woodlands", "North Wetlands", "South Wetlands")
 names(eco.labs) <- c("SP", "BP", "EW", "WW", "NW", "SW")
-# date.labs <- c("7/12/2022","8/18/2022")
-# names(date.labs) <- c("220712", "220818")
 gas.labs <- c("CO2", "CH4", "N2O")
 names(gas.labs) <- c("co2", "ch4","n2o")
-
-# july_aug_modified_data %>%
-#   filter(gas == "co2") %>%
-#   ggplot(aes(rep, flux)) +
-#   geom_point() +
-#   geom_smooth(method = "lm") +
-#   facet_grid(ecosystem~date.x, labeller = labeller(date.x = date.labs, ecosystem = eco.labs)) +
-#   labs(title = "CO2 fluxes by ecosystem", y = "Flux (mg CO2 m-2 d-1)", x = "Chamber ID") +
-#   scale_x_continuous(breaks = c(1,5,9,12))
-# ggsave("plots/co2_fluxes.png", width = 5, height = 9)
 
 full_data %>%
   #filter(gas == "co2") %>%
@@ -636,3 +626,79 @@ mod_data %>%
   theme(text = element_text(size=20))
 ggsave("plots/temperature/transect_ampm/n2o_oct_ampm_flux_n_temp.png", width = 30, height = 12)
 ```
+
+```{r hypothesis-testing}
+temp <- mod_data %>%
+  group_by(ecosystem, gas, am_pm) %>%
+  summarize(mean_flux = mean(flux)) %>%
+  pivot_wider(names_from = am_pm, values_from = mean_flux) %>%
+  summarize(diff_means = AM - PM) %>%
+  ungroup()
+
+
+# set.seed(9901)
+# mod_data %>%
+#   #filter(gas == ghg, ecosystem == eco) %>%
+#   #group_by(gas, ecosystem) %>%
+#   specify(flux ~ ecosystem + gas+ am_pm) %>%
+#    hypothesize(null = "independence") %>%
+#    generate(reps = 1000, type = "permute") %>%
+#    fit()
+# 
+# %>%
+#    summarize(p_value = sum(stat>temp$diff_means[1])/n())
+
+
+```
+
+```{r hyp-test-function, eval =T, warning = F, echo=F}
+options(dplyr.summarise.inform = FALSE)
+
+nachusa_hyp_test <- function(dataframe, n) {
+  
+statistic <- dataframe %>%
+  group_by(ecosystem, gas, am_pm) %>%
+  summarize(mean_flux = mean(flux)) %>%
+  pivot_wider(names_from = am_pm, values_from = mean_flux) %>%
+  summarize(diff_means = AM - PM) %>%
+  ungroup()
+
+set.seed(9901)
+p_value <- dataframe %>%
+  filter(gas == (statistic$gas[n]), ecosystem == (statistic$ecosystem[n]))%>%
+  #group_by(gas, ecosystem) %>%
+  specify(flux ~ am_pm) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("AM","PM")) %>%
+  summarize(p_value = case_when(
+    statistic$diff_means[n]>0 ~ sum(stat>statistic$diff_means[n])/n(), 
+    statistic$diff_means[n]<0 ~ sum(stat<statistic$diff_means[n])/n()))
+
+p_value
+
+}
+
+bind_rows(
+nachusa_hyp_test(mod_data, 1),
+nachusa_hyp_test(mod_data, 2),
+nachusa_hyp_test(mod_data, 3),
+nachusa_hyp_test(mod_data, 4),
+nachusa_hyp_test(mod_data, 5),
+nachusa_hyp_test(mod_data, 6),
+nachusa_hyp_test(mod_data, 7),
+nachusa_hyp_test(mod_data, 8),
+nachusa_hyp_test(mod_data, 9),
+nachusa_hyp_test(mod_data, 10),
+nachusa_hyp_test(mod_data, 11),
+nachusa_hyp_test(mod_data, 12),
+nachusa_hyp_test(mod_data, 13),
+nachusa_hyp_test(mod_data, 14),
+nachusa_hyp_test(mod_data, 15),
+nachusa_hyp_test(mod_data, 16),
+nachusa_hyp_test(mod_data, 17),
+nachusa_hyp_test(mod_data, 18)
+)%>%
+  bind_cols(temp)
+```
+
