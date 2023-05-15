@@ -384,14 +384,24 @@ ggsave("plots/ghg_violins.png")
 # ggsave("plots/ghg_boxplots.png")
 
 july_aug_modified_data %>%
-  filter(ecosystem != "SW") %>%
+  filter(ecosystem != "SW", gas == "co2") %>%
   ggplot(aes(x = transect, y = flux)) +
   geom_boxplot() +
   facet_grid(ecosystem~gas, labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free_y") +
-  labs(title = "GHG fluxes across transect positions", x = "Position", y = expression("Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")"))+
+  labs(title = "CO2 fluxes across transect positions", x = "Position", y = expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"))+
   theme_bw() +
   theme(text = element_text(size=20))
-ggsave("plots/ghg_boxplots_eco.png", height = 12)
+ggsave("plots/co2_boxplots_eco.png", height = 12)
+
+july_aug_modified_data %>%
+  filter(ecosystem != "SW", gas == "ch4") %>%
+  ggplot(aes(x = transect, y = flux)) +
+  geom_boxplot() +
+  facet_grid(ecosystem~gas, labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free_y") +
+  labs(title = "CH4 fluxes across transect positions", x = "Position", y = expression("Flux (nmol CH"[4]*" m"^{-2}*" s"^{-1}*")"))+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/ch4_boxplots_eco.png", height = 12)
 
 # july_aug_modified_data %>%
 #   filter(gas == "ch4") %>%
