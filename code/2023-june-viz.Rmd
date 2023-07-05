@@ -15,50 +15,51 @@ library(tidyverse)
 library(tidymodels)
 library(ggh4x)
 library(lubridate)
+library(forestmangr)
 ```
 
 ```{r read-data, message = F, include = F}
 flux_june <- read_csv("data/230607/230607_fluxes.csv")
 photo_june <- read_csv("data/230607/230607_photosynthesis.csv")
+anc <- read_csv("data/2023_ancillary.csv")
 #co2 <- read_csv("data/230607/230607_co2_fluxes.csv")
 ```
 
-```{r flux-plots}
-flux_june <- flux_june %>%
-  mutate(ecosystem = fct_relevel(ecosystem, c("NWd", "SWd", "Pr", "Wt")))
-
-flux_june %>% 
-  ggplot(aes(factor(ecosystem),flux, fill = ecosystem)) +
-  geom_violin() +
-  facet_grid(gas~., scales = "free") +
-  scale_fill_viridis_d(option = "G")
-
-flux_june %>%
-  ggplot(aes(factor(ecosystem), flux)) +
-  geom_boxplot() +
-  facet_grid(gas~., scales = "free")
-
-photo_june <- photo_june %>%
-  mutate(ecosystem = fct_relevel(ecosystem, c("SWdP", "PrP", "WtP")))
-
-photo_june %>% 
-  ggplot(aes(factor(ecosystem),flux, fill = ecosystem)) +
-  geom_violin() +
-  scale_fill_viridis_d(option = "G")
-
-photo_june %>%
-  ggplot(aes(factor(ecosystem), flux, color = factor(suff))) +
-  geom_boxplot()
+```{r early-plots, eval = F}
+# flux_june <- flux_june %>%
+#   mutate(ecosystem = fct_relevel(ecosystem, c("NWd", "SWd", "Pr", "Wt")))
+# 
+# flux_june %>% 
+#   ggplot(aes(factor(ecosystem),flux, fill = ecosystem)) +
+#   geom_violin() +
+#   facet_grid(gas~., scales = "free") +
+#   scale_fill_viridis_d(option = "G")
+# 
+# flux_june %>%
+#   ggplot(aes(factor(ecosystem), flux)) +
+#   geom_boxplot() +
+#   facet_grid(gas~., scales = "free")
+# 
+# photo_june <- photo_june %>%
+#   mutate(ecosystem = fct_relevel(ecosystem, c("SWdP", "PrP", "WtP")))
+# 
+# photo_june %>% 
+#   ggplot(aes(factor(ecosystem),flux, fill = ecosystem)) +
+#   geom_violin() +
+#   scale_fill_viridis_d(option = "G")
+# 
+# photo_june %>%
+#   ggplot(aes(factor(ecosystem), flux, color = factor(suff))) +
+#   geom_boxplot()
 ```
 
 ```{r combine-data}
 all_june <- bind_rows(flux_june, photo_june)
 
-mod_june <- all_june %>%
-  filter(gas == "co2", ecosystem != "NWd") %>%
-  mutate(ecosystem = fct_relevel(ecosystem,c("SWd","SWdP","Pr","PrP","Wt","WtP")))
+all_june <- all_june %>%
+  left_join(anc, by = c("date.x","ecosystem","pref","suff"))
 
-mod_june <- mod_june %>%
+all_june <- all_june %>%
   mutate(photo = case_when(ecosystem == "SWdP" ~ TRUE,
                            ecosystem == "PrP" ~ TRUE,
                            ecosystem == "WtP" ~ TRUE,
@@ -68,26 +69,141 @@ mod_june <- mod_june %>%
                            ecosystem == "WtP" ~ "Wt",
                          ecosystem == "SWd" ~ "SWd",
                            ecosystem == "Pr" ~ "Pr",
-                           ecosystem == "Wt" ~ "Wt"
-                         ),
+                           ecosystem == "Wt" ~ "Wt",
+                         ecosystem == "NWd" ~ "NWd"),
          eco = fct_relevel(eco, c("SWd","Pr", "Wt")))
+
+
+
+all_june %>%
+  group_by(gas) %>%
+  lm_table(flux ~ soil_moisture)
+  
+
+mod_june <- all_june %>%
+  filter(gas == "co2", ecosystem != "NWd") 
 
 mod_june <- mod_june %>%
   filter(case_when(photo == TRUE ~ suff == 2,
-                   photo == FALSE ~ T)
-         )
+                   photo == FALSE ~ T))
 
-mod_june %>%
-  ggplot(aes(eco, flux)) +
-  geom_violin()
+# mod_june <- mod_june %>%
+#   mutate(photo = case_when(ecosystem == "SWdP" ~ TRUE,
+#                            ecosystem == "PrP" ~ TRUE,
+#                            ecosystem == "WtP" ~ TRUE,
+#                            .default = FALSE),
+#          eco = case_when(ecosystem == "SWdP" ~ "SWd",
+#                            ecosystem == "PrP" ~ "Pr",
+#                            ecosystem == "WtP" ~ "Wt",
+#                          ecosystem == "SWd" ~ "SWd",
+#                            ecosystem == "Pr" ~ "Pr",
+#                            ecosystem == "Wt" ~ "Wt"
+#                          ),
+#          eco = fct_relevel(eco, c("SWd","Pr", "Wt")))
+
+# mod_june %>%
+#   ggplot(aes(eco, flux)) +
+#   geom_violin()
 
 ```
 
-```{r compare-covered-flux}
+```{r violins-and-boxes}
+all_june %>%
+  ggplot(aes(eco,flux,fill = eco)) +
+  geom_violin()+
+  facet_grid(gas~., scales = "free")+
+  theme_bw()+
+  scale_fill_viridis_d(option = "G")
+
+all_june %>%
+  ggplot(aes(eco,flux,fill = eco)) +
+  geom_violin()+
+  facet_grid(gas~photo, scales = "free")+
+  theme_bw()+
+  scale_fill_viridis_d(option = "G")
+
+```
+
+```{r moisture-n-temp-plots}
+all_june %>%
+  ggplot(aes(soil_moisture,flux, fill = eco)) +
+  geom_point(shape = 21) +
+  geom_smooth(method = "lm", color = "black",fill = "gray") +
+  scale_fill_viridis_d(option = "G") +
+  facet_grid(gas~., scales = "free") +
+  labs(title = "Flux vs. Soil Moisture")+
+  theme_bw()
+
 mod_june %>%
-  ggplot(aes(estimate, flux, color = photo)) +
-  geom_point() +
-  facet_grid(.~eco, scales = "free")
+  ggplot(aes(soil_moisture, flux, fill = eco, color = photo)) +
+  geom_point(shape = 21, size = 2, stroke = 1) +
+  theme_bw() +
+  geom_smooth(method = "lm", color = "black",fill = "gray") +
+  scale_fill_viridis_d(option = "G") +
+  scale_color_viridis_d(option = "H") +
+  labs(title = "Flux vs. Soil Moisture (Covered Only)")
+
+all_june %>%
+  ggplot(aes(soil_temp,flux, fill = eco)) +
+  geom_point(shape = 21) +
+  geom_smooth(method = "lm", color = "black",fill = "gray") +
+  scale_fill_viridis_d(option = "G") +
+  facet_grid(gas~., scales = "free") +
+  theme_bw() +
+  labs(title = "Flux vs. Soil Temp")
+
+mod_june %>%
+  ggplot(aes(soil_temp, flux, fill = eco, color = photo)) +
+  geom_point(shape = 21, size = 2, stroke = 1) +
+  geom_smooth(method = "lm", color = "black",fill = "gray") +
+  scale_fill_viridis_d(option = "G") +
+  scale_color_viridis_d(option = "H") +
+  labs(title = "Flux vs. Soil Temp (Covered Only)")+
+  theme_bw()
+```
+
+```{r photo-only}
+all_june %>%
+  filter(photo == TRUE) %>%
+  ggplot(aes(soil_moisture, flux, color = factor(suff), fill = eco))+
+  geom_point(shape = 21, size = 2, stroke = 1)+
+  geom_smooth(method = "lm", fill = "gray") +
+  scale_fill_viridis_d(option = "G") +
+  scale_color_viridis_d(option = "H") +
+  facet_grid(.~suff)+
+  theme_bw()
+  
+all_june %>%
+  filter(photo == TRUE) %>%
+  ggplot(aes(soil_temp, flux, color = factor(suff), fill = eco))+
+  geom_point(shape = 21, size = 2, stroke = 1)+
+  geom_smooth(method = "lm", fill = "gray") +
+  scale_fill_viridis_d(option = "G") +
+  scale_color_viridis_d(option = "H") +
+  facet_grid(.~suff)+
+  theme_bw()
+
+# all_june %>%
+#   filter(photo == TRUE) %>%
+#   ggplot(aes(air_temp, flux, color = factor(suff), fill = eco))+
+#   geom_point(shape = 21, size = 2, stroke = 1)+
+#   geom_smooth(method = "lm", fill = "gray") +
+#   scale_fill_viridis_d(option = "G") +
+#   scale_color_viridis_d(option = "H") +
+#   facet_grid(.~suff)+
+#   theme_bw()
+```
+
+```{r write-csv, eval = F}
+#write_csv(all_june, "data/230607/full_june_dataset.csv")
+```
+
+
+```{r compare-covered-flux, eval = F}
+# mod_june %>%
+#   ggplot(aes(estimate, flux, color = photo)) +
+#   geom_point() +
+#   facet_grid(.~eco, scales = "free")
 
 ```
 
