@@ -1,0 +1,38 @@
+---
+title: "quick flux viz"
+author: "Gavin McNicol"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/cloud/project")
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+files <- list.files("data/", pattern = "ppm")
+data <- lapply(paste0("data/", files), read_csv) %>% bind_rows()
+data
+```
+
+```{r}
+data %>% 
+  #filter(ch4_ppm < 6) %>% 
+  # filter(ecosystem == "NW", timepoint != "t3") %>% 
+  mutate(min_elapsed = case_when(
+    timepoint == "t0" ~ 0,
+    timepoint == "t1" ~ 7,
+    timepoint == "t2" ~ 17,
+    timepoint == "t3" ~ 27,
+    timepoint == "t4" ~ 37),
+    min_elapsed = as.numeric(min_elapsed)) %>% 
+  ggplot(aes(x = min_elapsed, y = ch4_ppm, color = factor(rep))) +
+  geom_point() +
+  facet_wrap(~ecosystem)
+```
+

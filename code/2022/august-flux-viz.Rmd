@@ -1,0 +1,127 @@
+---
+title: "August 18th Exploratory Flux Visualizations"
+author: "Michael Yonker"
+date: "3/31/23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/cloud/project")
+```
+
+```{r load-packages, message= F, include=F}
+library(tidyverse)
+library(ggh4x)
+```
+
+```{r read-files, message=F, include = F}
+fluxes_aug <- read_csv("data/220818/220818_fluxes.csv")
+ancillary <- read_csv("data/nachusa-soil-temp-moisture.csv")
+```
+
+```{r data-wrangling, include = F}
+moisture_aug <- ancillary %>%
+  filter(date == "2022-08-18") %>%
+  mutate(ecosystem = case_when(
+    site == "big_bowl" ~ "BP",
+    site == "small_bowl" ~ "SP",
+    site == "east" ~ "EW",
+    site == "west" ~ "WW",
+    site == "north" ~ "NW",
+    site == "south" ~ "SW"
+    )) %>%
+  mutate(rep = chamber) %>%
+  select(c(4,11,9,10))
+
+full_data_aug <- left_join(fluxes_aug, moisture_aug, by = c("ecosystem", "rep"))
+
+```
+
+```{r read-ppm-data, message=F,include=F}
+ppm_data_aug<-bind_rows(read_csv("data/220818/220818_t0_ghg_ppm.csv"),
+          read_csv("data/220818/220818_t1_ghg_ppm.csv"),
+          read_csv("data/220818/220818_t2_ghg_ppm.csv"),
+          read_csv("data/220818/220818_t3_ghg_ppm.csv"),
+          read_csv("data/220818/220818_t4_ghg_ppm.csv"))
+```
+
+```{r find-weird-ch4-flux, include=F}
+# full_data_aug %>%
+#   filter(gas == "ch4", flux>8)
+# 
+# ppm_data_aug %>%
+#   filter(ecosystem == "BP", rep == 8)
+```
+
+```{r ppm-viz, echo=F}
+# ppm_data_aug %>%
+#   #filter(ch4_ppm<9) %>% 
+#   #group_by(ecosystem) %>%
+#   #filter(ecosystem == "WW") %>%
+#   ggplot(aes(timepoint, ch4_ppm)) +
+#   geom_point() 
+#   #facet_nested_wrap(vars(ecosystem,rep), ncol = 3)
+#   #labs(title = "WW CH4 ppm")
+```
+
+
+```{r flux-viz, echo=F}
+full_data_aug %>% 
+  filter(gas == "ch4") %>%
+  ggplot(aes(x = soil_moisture, y = flux, color = factor(rep))) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "black", linewidth = .5) +
+  labs(title = "CH4 fluxes_aug vs. Gravimetric Soil Water Content", y = "Flux (μg CH4 m-2 d-1)", x = "Water Content (%)") +
+  facet_wrap(~ecosystem) +
+  guides(color = guide_legend(title = "Chamber ID"))
+
+full_data_aug %>% 
+  filter(gas == "n2o") %>%
+  group_by(ecosystem) %>%
+  ggplot(aes(x = soil_moisture, y = flux, color = factor(rep))) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "black", linewidth = .5) +
+  labs(title = "N2O fluxes_aug vs. Gravimetric Soil Water Content", y = "Flux (μg N2O m-2 d-1)", x = "Water Content (%)") +
+  facet_wrap(~ecosystem) +
+  guides(color = guide_legend(title = "Chamber ID"))
+
+full_data_aug %>% 
+  filter(gas == "co2") %>%
+  group_by(ecosystem) %>%
+  ggplot(aes(x = soil_moisture, y = flux, color = factor(rep))) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "black", linewidth = .5) +
+  labs(title = "CO2 fluxes_aug vs. Gravimetric Soil Water Content", y = "Flux (mg CO2 m-2 d-1)", x = "Water Content (%)") +
+  facet_wrap(~ecosystem) +
+  guides(color = guide_legend(title = "Chamber ID"))
+```
+
+```{r moisture-viz, warning=F, echo=F}
+full_data_aug %>% 
+  filter(gas == "ch4", p.value < .05) %>%
+  ggplot(aes(x = soil_moisture, y = p.value, color = factor(rep))) +
+  geom_point() +
+  labs(title = "Significant CH4 p-values vs. Gravimetric Soil Water Content", y = "p-value", x = "Water Content (%)") +
+  facet_wrap(~ecosystem) +
+  guides(color = guide_legend(title = "Chamber ID")) +
+  scale_y_reverse()
+
+full_data_aug %>% 
+  filter(gas == "n2o", p.value < .05) %>%
+  ggplot(aes(x = soil_moisture, y = p.value, color = factor(rep))) +
+  geom_point() +
+  labs(title = "Significant N2O p-values vs. Gravimetric Soil Water Content", y = "p-value", x = "Water Content (%)") +
+  facet_wrap(~ecosystem) +
+  guides(color = guide_legend(title = "Chamber ID")) +
+  scale_y_reverse()
+
+full_data_aug %>% 
+  filter(gas == "co2", p.value < .05) %>%
+  ggplot(aes(x = soil_moisture, y = p.value, color = factor(rep))) +
+  geom_point() +
+  labs(title = "Significant CO2 p-values vs. Gravimetric Soil Water Content", y = "p-value", x = "Water Content (%)") +
+  facet_wrap(~ecosystem) +
+  guides(color = guide_legend(title = "Chamber ID")) +
+  scale_y_reverse()
+```
