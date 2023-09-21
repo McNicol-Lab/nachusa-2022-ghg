@@ -220,8 +220,8 @@ full_data %>%
   labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
   scale_fill_viridis_d(option = "G",labels = eco.labs) +
   theme_bw() +
-  theme(text = element_text(size=20))
-ggsave("plots/ghg_violins_across_months.png", height = 14, width = 35)
+  theme(text = element_text(size=8, face = "bold"))
+ggsave("plots/ghg_violins_across_months_2.png", height = 8, width = 18)
 
 mod_data %>%
   filter(ecosystem != "SW", gas == "co2") %>%
@@ -303,7 +303,7 @@ mod_data %>%
   guides(guide_legend(title = "Ecosystem"))+
   theme_bw() +
   theme(text = element_text(size=20))
-ggsave("plots/moisture/all_flux_n_moisture.png", width = 30, height = 12)
+ggsave("plots/moisture/all_flux_n_moisture.png", width = 20, height = 12)
 
 mod_data %>%
   filter(date != "2022-07-12") %>%
@@ -381,7 +381,7 @@ mod_data %>%
   guides(guide_legend(title = "Ecosystem"))+
   theme_bw() +
   theme(text = element_text(size=20))
-ggsave("plots/temperature/all_flux_n_temp.png", width = 30, height = 12)
+ggsave("plots/temperature/all_flux_n_temp.png", width = 20, height = 12)
 
 mod_data %>%
   filter(date != "2022-07-12") %>%

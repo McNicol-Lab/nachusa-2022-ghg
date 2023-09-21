@@ -1,7 +1,7 @@
 ---
-title: "June 2023 Prelim Visualizations"
+title: "July 2023 Prelim Visualizations"
 author: "Michael Yonker"
-date: "6/30/23"
+date: "8/24/23"
 output: html_document
 ---
 
@@ -19,8 +19,8 @@ library(forestmangr)
 ```
 
 ```{r read-data, message = F, include = F}
-flux_june <- read_csv("data/230607/230607_fluxes.csv")
-photo_june <- read_csv("data/230607/230607_photosynthesis.csv")
+flux_july <- read_csv("data/230720/230720_fluxes.csv")
+photo_july <- read_csv("data/230720/230720_photosynthesis.csv")
 anc <- read_csv("data/2023_ancillary.csv")
 #co2 <- read_csv("data/230607/230607_co2_fluxes.csv")
 ```
@@ -53,37 +53,48 @@ anc <- read_csv("data/2023_ancillary.csv")
 #   geom_boxplot()
 ```
 
+```{r fix-data}
+anc <- anc %>%
+  mutate(date = date.x) %>%
+  select(!date.x)
+
+photo_july <- photo_july %>%
+  mutate(date = 230720)
+```
+
 ```{r combine-data}
-all_june <- bind_rows(flux_june, photo_june)
+all_july <- bind_rows(flux_july, photo_july)
 
-all_june <- all_june %>%
-  left_join(anc, by = c("date.x","ecosystem","pref","suff"))
+all_july <- all_july %>%
+  left_join(anc, by = c("date","ecosystem","pref","suff"))
 
-all_june <- all_june %>%
+all_july <- all_july %>%
   mutate(photo = case_when(ecosystem == "SWdP" ~ TRUE,
                            ecosystem == "PrP" ~ TRUE,
                            ecosystem == "WtP" ~ TRUE,
+                           ecosystem == "NWdP" ~ TRUE,
                            .default = FALSE),
          eco = case_when(ecosystem == "SWdP" ~ "SWd",
                            ecosystem == "PrP" ~ "Pr",
                            ecosystem == "WtP" ~ "Wt",
+                           ecosystem == "NWdP" ~ "NWd",
                          ecosystem == "SWd" ~ "SWd",
                            ecosystem == "Pr" ~ "Pr",
                            ecosystem == "Wt" ~ "Wt",
                          ecosystem == "NWd" ~ "NWd"),
-         eco = fct_relevel(eco, c("SWd","Pr", "Wt")))
+         eco = fct_relevel(eco, c("NWd","SWd","Pr", "Wt")))
 
 
 
-all_june %>%
-  group_by(gas) %>%
-  lm_table(flux ~ soil_moisture)
+# all_july %>%
+#   group_by(gas) %>%
+#   lm_table(flux ~ soil_moisture)
   
 
-mod_june <- all_june %>%
-  filter(gas == "co2", ecosystem != "NWd") 
+mod_july <- all_july %>%
+  filter(gas == "co2") 
 
-mod_june <- mod_june %>%
+mod_july <- mod_july %>%
   filter(case_when(photo == TRUE ~ suff == 2,
                    photo == FALSE ~ T))
 
@@ -108,42 +119,50 @@ mod_june <- mod_june %>%
 ```
 
 ```{r violins-and-boxes}
-all_june %>%
+all_july %>%
   ggplot(aes(eco,flux,fill = eco)) +
   geom_violin()+
   facet_grid(gas~., scales = "free")+
   theme_bw()+
   scale_fill_viridis_d(option = "G")
 
-all_june %>%
+all_july %>%
+  filter(gas=="co2") %>%
   ggplot(aes(eco,flux,fill = eco)) +
   geom_violin()+
   facet_grid(gas~photo, scales = "free")+
   theme_bw()+
   scale_fill_viridis_d(option = "G")
 
+all_july %>%
+  filter(gas=="co2", photo==TRUE) %>%
+  ggplot(aes(eco,flux,fill = eco)) +
+  geom_violin()+
+  facet_grid(gas~suff, scales = "free")+
+  theme_bw()+
+  scale_fill_viridis_d(option = "G")
 ```
 
 ```{r moisture-n-temp-plots}
-all_june %>%
-  ggplot(aes(soil_moisture,flux, fill = eco)) +
-  geom_point(shape = 21) +
-  geom_smooth(method = "lm", color = "black",fill = "gray") +
-  scale_fill_viridis_d(option = "G") +
-  facet_grid(gas~., scales = "free") +
-  labs(title = "Flux vs. Soil Moisture")+
-  theme_bw()
+# all_july %>%
+#   ggplot(aes(soil_moisture,flux, fill = eco)) +
+#   geom_point(shape = 21) +
+#   geom_smooth(method = "lm", color = "black",fill = "gray") +
+#   scale_fill_viridis_d(option = "G") +
+#   facet_grid(gas~., scales = "free") +
+#   labs(title = "Flux vs. Soil Moisture")+
+#   theme_bw()
+# 
+# mod_july %>%
+#   ggplot(aes(soil_moisture, flux, fill = eco, color = photo)) +
+#   geom_point(shape = 21, size = 2, stroke = 1) +
+#   theme_bw() +
+#   geom_smooth(method = "lm", color = "black",fill = "gray") +
+#   scale_fill_viridis_d(option = "G") +
+#   scale_color_viridis_d(option = "H") +
+#   labs(title = "Flux vs. Soil Moisture (Covered Only)")
 
-mod_june %>%
-  ggplot(aes(soil_moisture, flux, fill = eco, color = photo)) +
-  geom_point(shape = 21, size = 2, stroke = 1) +
-  theme_bw() +
-  geom_smooth(method = "lm", color = "black",fill = "gray") +
-  scale_fill_viridis_d(option = "G") +
-  scale_color_viridis_d(option = "H") +
-  labs(title = "Flux vs. Soil Moisture (Covered Only)")
-
-all_june %>%
+all_july %>%
   ggplot(aes(soil_temp,flux, fill = eco)) +
   geom_point(shape = 21) +
   geom_smooth(method = "lm", color = "black",fill = "gray") +
@@ -152,7 +171,7 @@ all_june %>%
   theme_bw() +
   labs(title = "Flux vs. Soil Temp")
 
-mod_june %>%
+mod_july %>%
   ggplot(aes(soil_temp, flux, fill = eco, color = photo)) +
   geom_point(shape = 21, size = 2, stroke = 1) +
   geom_smooth(method = "lm", color = "black",fill = "gray") +
@@ -163,17 +182,7 @@ mod_june %>%
 ```
 
 ```{r photo-only}
-all_june %>%
-  filter(photo == TRUE) %>%
-  ggplot(aes(soil_moisture, flux, color = factor(suff), fill = eco))+
-  geom_point(shape = 21, size = 2, stroke = 1)+
-  geom_smooth(method = "lm", fill = "gray") +
-  scale_fill_viridis_d(option = "G") +
-  scale_color_viridis_d(option = "H") +
-  facet_grid(.~suff)+
-  theme_bw()
-  
-all_june %>%
+all_july %>%
   filter(photo == TRUE) %>%
   ggplot(aes(soil_temp, flux, color = factor(suff), fill = eco))+
   geom_point(shape = 21, size = 2, stroke = 1)+
@@ -182,6 +191,16 @@ all_june %>%
   scale_color_viridis_d(option = "H") +
   facet_grid(.~suff)+
   theme_bw()
+  
+# all_july %>%
+#   filter(photo == TRUE) %>%
+#   ggplot(aes(soil_temp, flux, color = factor(suff), fill = eco))+
+#   geom_point(shape = 21, size = 2, stroke = 1)+
+#   geom_smooth(method = "lm", fill = "gray") +
+#   scale_fill_viridis_d(option = "G") +
+#   scale_color_viridis_d(option = "H") +
+#   facet_grid(.~suff)+
+#   theme_bw()
 
 # all_june %>%
 #   filter(photo == TRUE) %>%
@@ -195,7 +214,7 @@ all_june %>%
 ```
 
 ```{r write-csv, eval = F}
-#write_csv(all_june, "data/230607/full_june_dataset.csv")
+#write_csv(all_july, "data/230720/full_july_dataset.csv")
 ```
 
 
