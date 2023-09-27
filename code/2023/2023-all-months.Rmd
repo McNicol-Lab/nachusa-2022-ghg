@@ -1,0 +1,130 @@
+---
+title: "All 2023 Prelim Visualizations"
+author: "Michael Yonker"
+date: "9/21/23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/cloud/project")
+```
+
+```{r load-packages, message= F, include=F}
+library(tidyverse)
+library(tidymodels)
+library(ggh4x)
+library(lubridate)
+library(forestmangr)
+```
+
+```{r read-data, message = F, include = F}
+sep <- read_csv("data/230909/full_sep_dataset.csv")
+july <- read_csv("data/230720/full_july_dataset.csv")
+june <- read_csv("data/230607/full_june_dataset.csv")
+anc <- read_csv("data/2023_ancillary.csv")
+```
+
+```{r fix-june-data}
+june <- june %>%
+  mutate(date = date.x) %>%
+  select(!date.x&!date.y)
+```
+
+```{r combine-months}
+all_data <- bind_rows(june,july,sep)
+all_data <- all_data %>%
+  mutate(date = ymd(date),
+         ecosystem = fct_relevel(ecosystem, c(
+                                 "NWd",
+                                 "NWdP",
+                                 "SWd",
+                                 "SWdP",
+                                 "Pr",
+                                 "PrP",
+                                 "Wt",
+                                 "WtP")),
+         eco = fct_relevel(eco, c(
+                                "NWd",
+                                "SWd",
+                                "Pr",
+                                "Wt"
+         )),
+         gas = fct_relevel(gas, c(
+                                 "co2",
+                                 "ch4",
+                                 "n2o")))
+```
+
+```{r plot-labels}
+eco.labs <- c("North Woodlands", "South Woodlands", "Prairie", "Wetlands")
+names(eco.labs) <- c("NWd", "SWd", "Pr", "Wt")
+gas.labs <- c("CO2", "CH4", "N2O")
+names(gas.labs) <- c("co2", "ch4","n2o")
+```
+
+
+
+```{r violins}
+all_data %>%
+  #filter(gas == "co2") %>%
+  ggplot(aes(x = eco, y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/ghg_violins.png")
+
+all_data %>%
+  #filter(gas == "co2") %>%
+  ggplot(aes(x = factor(date), y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~eco, labeller = labeller(gas = gas.labs, eco= eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  theme_bw() +
+  theme(text = element_text(size=8, face = "bold"))
+ggsave("plots/2023/ghg_violins_across_months.png", height = 8, width = 18)
+
+all_data %>%
+  filter(date != "2023-07-20") %>%
+  ggplot(aes(soil_moisture, flux, fill = eco)) +
+  geom_point(shape = 21, color = "black", size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(gas~date, scales = "free") +
+  labs(title = "Gas Fluxes vs. Soil Water Content Across Months", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Water Content (%)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/moisture/all_flux_n_moisture.png", width = 20, height = 12)
+
+all_data %>%
+  ggplot(aes(soil_temp, flux, fill = eco)) +
+  geom_point(shape = 21, color = "black", size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(gas~date, scales = "free") +
+  labs(title = "Gas Fluxes vs. Soil Temperature Across Months", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Temperature (C)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/temperature/all_flux_n_temp.png", width = 20, height = 12)
+
+all_data %>%
+  filter(photo == TRUE, gas == "co2") %>%
+  ggplot(aes(soil_temp, flux, fill = eco, color = factor(suff))) +
+  geom_point(shape = 21, stroke = 1, size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(date~suff, scales = "free") +
+  labs(title = "Gas Fluxes vs. Soil Temperature Across Months", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Temperature (C)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/photo/photo_n_temp.png", width = 20, height = 12)
+
+```
+
