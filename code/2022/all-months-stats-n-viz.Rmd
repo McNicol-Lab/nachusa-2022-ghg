@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "/cloud/project")
+knitr::opts_knit$set(root.dir = "~/Documents/R Code/nachusa-viz/")
 ```
 
 ```{r load-packages, message= F, include=F}
@@ -156,38 +156,43 @@ mod_data <-
                    ecosystem != "WW" ~ T,
                    rep != 4 ~T))
 
-mod_data <- mod_data %>%
-  mutate(am_pm = case_when(
-    date == "2022-07-12" & ecosystem == "WW" ~ "AM",
-    date == "2022-07-12" & ecosystem == "SW" ~ "AM",
-    date == "2022-07-12" & ecosystem == "BP" ~ "AM",
-    date == "2022-07-12" & ecosystem == "EW" ~ "PM",
-    date == "2022-07-12" & ecosystem == "NW" ~ "PM",
-    date == "2022-07-12" & ecosystem == "SP" ~ "PM",
-    
-    date == "2022-08-18" & ecosystem == "EW" ~ "AM",
-    date == "2022-08-18" & ecosystem == "NW" ~ "AM",
-    date == "2022-08-18" & ecosystem == "SP" ~ "AM",
-    date == "2022-08-18" & ecosystem == "WW" ~ "PM",
-    date == "2022-08-18" & ecosystem == "SW" ~ "PM",
-    date == "2022-08-18" & ecosystem == "BP" ~ "PM",
-    
-    date == "2022-09-24" & ecosystem == "WW" ~ "AM",
-    date == "2022-09-24" & ecosystem == "SW" ~ "AM",
-    date == "2022-09-24" & ecosystem == "SP" ~ "AM",
-    date == "2022-09-24" & ecosystem == "EW" ~ "PM",
-    date == "2022-09-24" & ecosystem == "NW" ~ "PM",
-    date == "2022-09-24" & ecosystem == "BP" ~ "PM",
-    
-    date == "2022-10-22" & ecosystem == "EW" ~ "AM",
-    date == "2022-10-22" & ecosystem == "SW" ~ "AM",
-    date == "2022-10-22" & ecosystem == "BP" ~ "AM",
-    date == "2022-10-22" & ecosystem == "WW" ~ "PM",
-    date == "2022-10-22" & ecosystem == "NW" ~ "PM",
-    date == "2022-10-22" & ecosystem == "SP" ~ "PM"
-  ))
+# mod_data <- mod_data %>%
+#   mutate(am_pm = case_when(
+#     date == "2022-07-12" & ecosystem == "WW" ~ "AM",
+#     date == "2022-07-12" & ecosystem == "SW" ~ "AM",
+#     date == "2022-07-12" & ecosystem == "BP" ~ "AM",
+#     date == "2022-07-12" & ecosystem == "EW" ~ "PM",
+#     date == "2022-07-12" & ecosystem == "NW" ~ "PM",
+#     date == "2022-07-12" & ecosystem == "SP" ~ "PM",
+#     
+#     date == "2022-08-18" & ecosystem == "EW" ~ "AM",
+#     date == "2022-08-18" & ecosystem == "NW" ~ "AM",
+#     date == "2022-08-18" & ecosystem == "SP" ~ "AM",
+#     date == "2022-08-18" & ecosystem == "WW" ~ "PM",
+#     date == "2022-08-18" & ecosystem == "SW" ~ "PM",
+#     date == "2022-08-18" & ecosystem == "BP" ~ "PM",
+#     
+#     date == "2022-09-24" & ecosystem == "WW" ~ "AM",
+#     date == "2022-09-24" & ecosystem == "SW" ~ "AM",
+#     date == "2022-09-24" & ecosystem == "SP" ~ "AM",
+#     date == "2022-09-24" & ecosystem == "EW" ~ "PM",
+#     date == "2022-09-24" & ecosystem == "NW" ~ "PM",
+#     date == "2022-09-24" & ecosystem == "BP" ~ "PM",
+#     
+#     date == "2022-10-22" & ecosystem == "EW" ~ "AM",
+#     date == "2022-10-22" & ecosystem == "SW" ~ "AM",
+#     date == "2022-10-22" & ecosystem == "BP" ~ "AM",
+#     date == "2022-10-22" & ecosystem == "WW" ~ "PM",
+#     date == "2022-10-22" & ecosystem == "NW" ~ "PM",
+#     date == "2022-10-22" & ecosystem == "SP" ~ "PM"
+#   ))
 
 ```
+
+```{r write-to-csv}
+write_csv(mod_data, "data/2022_full_dataset.csv")
+```
+
 
 ```{r flux-summary-modified, message=F, eval=F}
 mod_data %>%
