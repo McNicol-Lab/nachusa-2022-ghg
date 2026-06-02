@@ -1,0 +1,1557 @@
+---
+title: "All 2024 Prelim Visualizations"
+author: "Michael Yonker"
+date: "4/13/26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/R Code/nachusa-viz/")
+```
+
+```{r load-packages, message= F, include=F}
+library(tidyverse)
+library(tidymodels)
+library(ggh4x)
+library(lubridate)
+library(forestmangr)
+library(chron)
+library(hms)
+library(jtools)
+library(ggpmisc)
+```
+
+```{r read-data}
+anc_2024 <- read_csv("data/2024_ancillary.csv")
+
+flux_june <- read_csv("data/240611/240611_fluxes.csv")
+photo_june <- read_csv("data/240611/240611_photosynthesis.csv") %>%
+  mutate(date=240611)
+
+flux_july <- read_csv("data/240726/240726_fluxes.csv")
+photo_july <- read_csv("data/240726/240726_photosynthesis.csv") %>%
+  mutate(date=240726)
+
+flux_sep <- read_csv("data/240914/240914_fluxes.csv")
+
+flux_oct <- read_csv("data/241025/241025_fluxes.csv")
+
+flux_mar <- read_csv("data/250314/250314_fluxes.csv")
+
+```
+
+```{r combine-data}
+
+all_data_2024 <- bind_rows(flux_june, photo_june, flux_july, photo_july, flux_sep, flux_oct, flux_mar) %>%
+  left_join(anc_2024)%>%
+  mutate(id = paste0(ecosystem, " ",pref,"-",suff)) %>%
+  select(date, id, ecosystem, pref, suff, gas, flux, units, estimate, p.value, air_temp, soil_temp, soil_moisture) %>%
+  mutate(date=ymd(date),
+         gas = fct_relevel(gas, c("co2","ch4","n2o")),
+         eco = case_when(ecosystem == "NWdP" ~ "NWd",
+                         ecosystem == "SWdP" ~ "SWd",
+                         ecosystem == "PrP" ~ "Pr",
+                         ecosystem == "WtP" ~ "Wt",
+                         .default = ecosystem),
+         eco = fct_relevel(eco, c("NWd","SWd","Pr","Wt")),
+         photo = case_when(ecosystem %in% c("NWdP","SWdP","PrP","WtP") ~ TRUE,
+                           .default = FALSE),
+         )
+
+write_csv(all_data_2024, "data/2024_full_dataset.csv")
+
+```
+
+```{r import-2023-data}
+# all_data_2023 <- read_csv("data/2023_full_dataset.csv") %>%
+#   mutate(id = paste0(ecosystem, " ",pref,"-",suff)) %>%
+#   select(date, id, ecosystem, pref, suff, gas, flux, units, estimate, p.value, air_temp, soil_temp, soil_moisture,eco,photo)
+# 
+# write_csv(all_data_2023, "data/2023_full_dataset.csv")
+```
+
+```{r combine-datasets}
+# full_dataset <- bind_rows(all_data_2023,all_data_2024)
+# 
+# write_csv(full_dataset, "data/combined_dataset_2023_2024.csv")
+# anc_2024 <- anc_2024 %>%
+#   mutate(date=ymd(date))
+# 
+# full_dataset <- left_join(full_dataset,anc_2024)
+```
+
+```{r import-nach-air-temp}
+# nach_air_temp_2022 <- read_csv("data/weather_station/Nachusa_air-temperature_20221115_20230711.csv") %>%
+#   mutate(date = mdy_hms(paste0(Month,"-",Day,"-",Year," ",Time))) %>%
+#   rename(temp_F = "air-temperature-f") %>%
+#   select(date,temp_F)
+# 
+# nach_air_temp_202307 <- read_csv("data/weather_station/Nachusa_air-temperature-20230711_20231017.csv") %>%
+#   rename(temp_F = value) %>%
+#   select(date, temp_F)
+# 
+# nach_air_temp_202310 <- read_csv("data/weather_station/Nachusa_air-temperature_20231017-20241017_raw.csv") %>%
+#   rename(temp_F = value) %>%
+#   select(date, temp_F)
+# 
+# nach_air_temp_2024 <-   read_csv("data/weather_station/Nachusa_air-temperature-f_20241018-20250402_raw.csv") %>%
+#   rename(temp_F = value) %>%
+#   select(date, temp_F)
+# 
+# nach_air_temp_2025 <- read_csv("data/weather_station/Nachusa_air-temperature-f__20250402-20260127_raw.csv") %>%
+#   select(date, temp_F)
+# 
+# nach_air_temp <- bind_rows(nach_air_temp_2022, nach_air_temp_202307, nach_air_temp_202310, nach_air_temp_2024, nach_air_temp_2025) %>%
+#   mutate(day = date(date)) %>%
+#   group_by(day) %>%
+#   mutate(daily_mean_temp = mean(temp_F, na.rm=T)) %>%
+#   arrange(date)
+# 
+# write_csv(nach_air_temp, "data/nach_air_temp.csv")
+```
+
+```{r import-nach-precip}
+# nach_precip_202307 <- read_csv("data/weather_station/Nachusa_precipitation-inch_20230711_20231017.csv") %>%
+#   mutate(day = date(date)) %>%
+#   group_by(day) %>%
+#   mutate(daily_total_precip = sum(value,na.rm = T)) %>%
+#   select(day,daily_total_precip) %>%
+#   distinct(day,daily_total_precip) %>%
+#   arrange(day)
+# 
+# nach_precip_202310 <- read_csv("data/weather_station/Nachusa_daily_precip_20231017-200241017_raw.csv") %>%
+#   mutate(day = date(date)) %>%
+#   rename(daily_total_precip = value) %>%
+#   distinct(day,daily_total_precip)
+# 
+# nach_precip_2024 <- read_csv("data/weather_station/Nachusa_daily_precip_20241018-20250402_raw.csv") %>%
+#   mutate(day = date(date)) %>%
+#   rename(daily_total_precip = value) %>%
+#   distinct(day,daily_total_precip)
+# 
+# nach_precip_2025 <- read_csv("data/weather_station/Nachusa_daily_precip_20250402_20260127_raw.csv") %>%
+#   mutate(day = date(date)) %>%
+#   rename(daily_total_precip = Precip_24hr_inches) %>%
+#   distinct(day,daily_total_precip)
+# 
+# nach_precip <- bind_rows(nach_precip_202307,nach_precip_202310,nach_precip_2024,nach_precip_2025) %>%
+#   arrange(day)
+# 
+# write_csv(nach_precip, "data/nach_precip.csv")
+```
+
+```{r import-tidy-nach}
+# nach_air_temp <- read_csv("data/nach_air_temp.csv")
+# 
+# nach_precip <- read_csv("data/nach_precip.csv")
+# 
+# daily_temp_precip <- nach_air_temp %>%
+#   distinct(day,daily_mean_temp) %>%
+#   left_join(nach_precip)
+# 
+# write_csv(daily_temp_precip, "data/nach_temp_precip.csv")
+```
+
+```{r fix-september-date}
+# full_dataset <- full_dataset %>%
+#   mutate(date = case_when(is.na(date) ~ ymd(2024-09-20),
+#                           .default = date))
+# 
+# 
+# 
+# full_dataset %>%
+#   filter(date == "2024-09-20")
+#write_csv(full_dataset, "data/combined_dataset_2023_2024.csv")
+```
+
+
+```{r import-tidy-data}
+full_dataset <- read_csv("data/combined_dataset_2023_2024.csv") %>%
+  mutate(gas = fct_relevel(gas, c("co2","ch4","n2o")),
+         eco = fct_relevel(eco, c("NWd","SWd","Pr","Wt")))
+  
+
+nach_temp_precip <- read_csv("data/nach_temp_precip.csv") %>%
+  mutate(daily_mean_temp_c = (daily_mean_temp - 32)/1.8)
+
+```
+
+
+```{r labels}
+eco.labs <- c("Prairie", "Wet Prairie", "North Woodlands", "South Woodlands")
+names(eco.labs) <- c("Pr", "Wt", "NWd", "SWd")
+
+gas.labs <- c("CO2", "CH4", "N2O")
+names(gas.labs) <- c("co2", "ch4","n2o")
+
+date.labs <- c("June 2023","July 2023", "Sept. 2023","Oct. 2023", "Nov. 2023", "June 2024","July 2024", "Sept. 2024", "Oct. 2024", "Mar. 2025")
+names(date.labs) <- c("2023-06-07","2023-07-20","2023-09-09","2023-10-14","2023-11-11","2024-06-11","2024-07-26","2024-09-20","2024-10-25","2025-03-14")
+```
+
+```{r weather-lined}
+nach_temp_precip %>%
+  ggplot(aes(day, daily_mean_temp)) +
+  geom_line() +
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-06-30"))) +
+  theme_bw() +
+  geom_vline(xintercept = c(ymd("2023-06-07"),ymd("2023-07-20"),ymd("2023-09-09"),ymd("2023-10-14"),ymd("2023-11-11"),ymd("2024-06-11"),ymd("2024-07-26"),ymd("2024-09-20"),ymd("2024-10-25"),ymd("2025-03-14")), color = "#1AB884")+
+  theme(text = element_text(size = 30)) +
+  labs(title = "Daily Mean Temperature", x = "Date", y = "Temperature (ºF)")
+ggsave("plots/symposium/meantemplined.png",height = 6, width = 12)
+
+nach_temp_precip %>%
+  ggplot(aes(day, daily_total_precip)) +
+  geom_line() +
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-06-30"))) +
+  theme_bw() +
+  geom_vline(xintercept = c(ymd("2023-06-07"),ymd("2023-07-20"),ymd("2023-09-09"),ymd("2023-10-14"),ymd("2023-11-11"),ymd("2024-06-11"),ymd("2024-07-26"),ymd("2024-09-20"),ymd("2024-10-25"),ymd("2025-03-14")), color = "#1AB884")+
+  theme(text = element_text(size = 30)) +
+  labs(title = "Total Daily Precipitation", x = "Date", y = "Precipitation (in.)")
+ggsave("plots/symposium/preciplined.png",height = 6, width = 12)
+```
+
+```{r violins-eco}
+full_dataset %>%
+  filter(photo==FALSE) %>%
+  ggplot(aes(eco,flux,fill=eco)) +
+  geom_violin() +
+  facet_grid(gas~.,scales="free",labeller = labeller(gas = gas.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed")+
+  labs(title="GHG Fluxes Across Ecosystems",x="Ecosystem",y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme(text = element_text(size = 30))+
+  theme_bw()
+ggsave("plots/symposium/violins_eco.png",height=5,width=5)
+
+full_dataset %>%
+  filter(photo==FALSE,gas=="co2") %>%
+  ggplot(aes(date,flux,fill=eco,group=date)) +
+  geom_violin() +
+  facet_grid(eco~.,labeller = labeller(gas = gas.labs,date=date.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed") +
+  labs(title=expression("CO"[2]*" Fluxes Across Ecosystems"),x="Date",y = expression( "CO"[2]*" Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme_bw()+
+  theme(text = element_text(size = 10),legend.position = "bottom", legend.text=element_text(size=7))
+ggsave("plots/symposium/violins_dates_co2.png",height=5,width=5)
+
+full_dataset %>%
+  filter(photo==FALSE,gas=="ch4") %>%
+  ggplot(aes(date,flux,fill=eco,group=date)) +
+  geom_violin() +
+  facet_grid(eco~.,labeller = labeller(gas = gas.labs,date=date.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed") +
+  labs(title=expression("CH"[4]*" Fluxes Across Ecosystems"),x="Date",y = expression( "CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme_bw()+
+  theme(axis.text.y=element_text(size=6),text=element_text(size=10), legend.position = "bottom",legend.text = element_text(size=7))
+ggsave("plots/symposium/violins_dates_ch4.png",height=5,width=5)
+
+full_dataset %>%
+  filter(photo==FALSE,gas=="n2o") %>%
+  ggplot(aes(date,flux,fill=eco,group=date)) +
+  geom_violin() +
+  facet_grid(eco~.,labeller = labeller(gas = gas.labs,date=date.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed") +
+  labs(title=expression("N"[2]*"O Fluxes Across Ecosystems"),x="Date",y = expression( "N"[2]*"O Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme_bw()+
+  theme(text = element_text(size = 10), legend.position = "bottom",legend.text=element_text(size=7))
+ggsave("plots/symposium/violins_dates_n2o.png",height=5,width=5)
+
+```
+
+```{r temp-plots}
+full_dataset %>%
+  filter(photo==F,gas=="co2") %>%
+  mutate(year = case_when(date < "2023-12-31" ~ "2023",
+                          date>= "2024-01-01" ~ "2024")) %>%
+  ggplot(aes(soil_temp,flux,fill=factor(date),group=year))+
+  geom_point(shape=21,size=2)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  scale_fill_manual(labels=eco.labs,values = c("#0c0304", "#3d356b", "#367ba3", "#4ac1ac", "#ddf6e5","#0c0304", "#3d356b", "#367ba3", "#4ac1ac", "#ddf6e5"))+
+  facet_grid(year~.)+
+  stat_poly_eq(use_label("eq","R2"))+
+  theme_bw()+
+  labs(title=expression("CO"[2]*" Flux vs. Soil Temperature"),x="Temperature (ºC)",y=expression("CO"[2]*" Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ),fill="Date")+
+  theme(text=element_text(size=15),legend.position="bottom",legend.text = element_text(size=10))
+ggsave("plots/symposium/temp_flux_all.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="co2") %>%
+  ggplot(aes(soil_temp,flux))+
+  geom_point(alpha=.5)+
+  facet_wrap(.~date,ncol=5)+
+  geom_smooth(method="lm",color="black")+
+  theme_bw()+
+  labs(title=expression("CO"[2]*" Flux vs. Soil Temperature"),x="Temperature (ºC)",y=expression("CO"[2]*" Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ))+
+  theme(text=element_text(size=15))
+ggsave("plots/symposium/temp_flux_months.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="co2",date!="2023-07-20",date!="2024-09-20") %>%
+  ggplot(aes(soil_temp,flux,fill=eco))+
+  geom_point(shape=21)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  facet_grid(eco~date)+
+  scale_fill_viridis_d(option="G",labels=eco.labs)+
+  geom_hline(yintercept=0,linetype="dashed")+
+  #labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem")+
+  theme(text=element_text(size=15),legend.position="bottom")
+ggsave("plots/symposium/temp_flux_eco_months.png",height=7,width=14)
+
+full_dataset %>%
+  filter(photo==F,gas=="co2") %>%
+  ggplot(aes(soil_temp,flux,fill=eco))+
+  geom_point(shape=21)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  facet_grid(eco~.)+
+  stat_poly_eq(use_label("eq","R2"))+
+  scale_fill_viridis_d(option="G",labels=eco.labs)+
+  geom_hline(yintercept=0,linetype="dashed")+
+  labs(title=expression("CO"[2]*" Flux vs. Soil Temperature"),x="Soil Temperature (ºC) (%)",y=expression("CO"[2]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem")+
+  theme(text=element_text(size=15),legend.position="bottom")
+ggsave("plots/symposium/temp_flux_eco.png",height=7,width=7)
+```
+
+```{r elevation-plots}
+# full_dataset %>%
+#   filter(photo==F) %>%
+#   ggplot(aes(pref,flux,group=pref)) +
+#   geom_violin()+
+#   labs(title="North Woodland Fluxes vs. Elevation")+
+#   facet_grid(eco~gas,scales ="free")
+
+
+full_dataset %>%
+  filter(photo==F,eco=="NWd",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="North Woodland Fluxes vs. Elevation")+
+  facet_grid(gas~date,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="NWd",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="North Woodland Fluxes vs. Elevation")+
+  facet_grid(gas~.,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="SWd",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="South Woodland Fluxes vs. Elevation")+
+  facet_grid(gas~date,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="SWd",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="South Woodland Fluxes vs. Elevation")+
+  facet_grid(gas~.,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="Pr",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="Prairie Fluxes vs. Elevation")+
+  facet_grid(gas~date,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="Pr",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="Prairie Fluxes vs. Elevation")+
+  facet_grid(gas~.,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="Wt",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="Wet Prairie Fluxes vs. Elevation")+
+  facet_grid(gas~date,scales ="free")
+
+full_dataset %>%
+  filter(photo==F,eco=="Wt",date!="2024-09-20") %>%
+  ggplot(aes(pref,flux,group=pref)) +
+  geom_violin()+
+  labs(title="Wet Prairie Fluxes vs. Elevation")+
+  facet_grid(gas~.,scales ="free")
+
+
+
+full_dataset %>%
+  filter(photo==F, gas=="co2") %>%
+  ggplot(aes(soil_moisture,flux,fill=factor(pref))) +
+  facet_grid(eco~.)+
+  labs(title="co2")+
+  scale_fill_viridis_d(option="G")+
+  geom_point(shape=21)
+
+full_dataset %>%
+  filter(photo==F, gas=="ch4") %>%
+  ggplot(aes(soil_moisture,flux,fill=factor(pref))) +
+  facet_grid(eco~.)+
+  labs(title="ch4")+
+  scale_fill_viridis_d(option="G")+
+  geom_point(shape=21)
+
+full_dataset %>%
+  filter(photo==F, gas=="n2o") %>%
+  ggplot(aes(soil_moisture,flux,fill=factor(pref))) +
+  facet_grid(eco~.)+
+  labs(title="n2o")+
+  scale_fill_viridis_d(option="G")+
+  geom_point(shape=21)
+
+```
+
+
+```{r photo-plots}
+full_dataset %>%
+  filter(photo==T) %>%
+  ggplot(aes(eco,flux))+
+  geom_violin()+
+  facet_grid(.~suff)
+
+full_dataset %>%
+  filter(photo==T) %>%
+  ggplot(aes(soil_temp,flux))+
+  geom_point()+
+  facet_grid(.~suff)
+
+full_dataset %>%
+  filter(photo==T) %>%
+  mutate(name=paste0(eco,pref))%>%
+  select(!c(id,estimate,p.value,air_temp,soil_temp,soil_moisture))%>%
+  pivot_wider(names_from=suff,values_from=flux,names_prefix="flux") %>%
+  ggplot(aes(name,fill=eco))+
+  geom_point(color = "black", size = 4, shape = 21, aes(y = flux1)) +
+  geom_point(color = "black", size = 3, shape = 24, aes(y = flux2)) +
+  geom_segment(aes(x = name, xend = name, y = flux1, yend = flux2))+
+  facet_grid(eco~date)+
+  geom_hline(yintercept=0,linetype="dashed")+
+  theme(axis.text.x=element_blank())+
+  scale_fill_viridis_d(option="G")
+  
+
+```
+
+
+```{r violins-continuous-x}
+# nach_temp_precip %>%
+#   ggplot(aes(day,daily_mean_temp_c)) +
+#   geom_line() +
+#   scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01"))) +
+#   theme_bw() +
+#   theme(text = element_text(size=30))
+# ggsave("plots/symposium/meantemp20232025_c.png",height = 10,width=15)
+
+nach_temp_precip %>%
+  ggplot(aes(day,daily_mean_temp, color = daily_mean_temp)) +
+  geom_line() +
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01"))) +
+  theme_bw() +
+  theme(text = element_text(size=15),legend.position = "none") +
+  scale_color_viridis_c(option="C",end=0.7)+
+  labs(title = "Daily Mean Temperature", x = "Date", y = "Temperature (ºF)")
+ggsave("plots/symposium/meantemp20232025_f.png",height = 5,width=10)
+
+nach_temp_precip %>%
+  ggplot(aes(day,daily_total_precip, color = daily_total_precip)) +
+  geom_line() +
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01"))) +
+  theme_bw() +
+  theme(text = element_text(size=10)) +
+  scale_color_viridis_c(option="G")+
+  labs(title = "Daily Total Precipitation", x = "Date", y = "Precipitation (in.)")+
+  theme(legend.position = "none")
+ggsave("plots/symposium/precip20232025.png",height = 5,width=10)
+
+full_dataset %>%
+  filter(gas=="co2",photo==F) %>%
+ggplot(aes(date,flux, group = date)) +
+  geom_violin()+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  theme(text = element_text(size=30),axis.title=element_text(size=20)) +
+  geom_hline(yintercept = 0, linetype="dashed", size = 1) +
+  labs(title = "Monthly CO2 Fluxes ", y = expression( "Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+ggsave("plots/symposium/violins_co2_time_series.png", height = 6, width = 12)
+
+full_dataset %>%
+  filter(gas=="ch4") %>%
+ggplot(aes(date,flux, group = date)) +
+  geom_violin()+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  theme(text = element_text(size=30)) +
+  geom_hline(yintercept = 0, linetype="dashed", size = 1) +
+  labs(title = "Monthly CH4 Fluxes ", y = expression( "Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+ggsave("plots/symposium/violins_ch4_time_series.png", height = 6, width = 12)
+
+full_dataset %>%
+  filter(gas=="n2o") %>%
+ggplot(aes(date,flux, group = date)) +
+  geom_violin()+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  theme(text = element_text(size=10)) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  labs(title = "Monthly N2O Fluxes ", y = expression( "Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+ggsave("plots/symposium/violins_n2o_time_series.png", height = 5, width = 10)
+
+full_dataset %>%
+  filter(gas=="co2") %>%
+  mutate(eco = fct_relevel(eco, c("NWd","SWd","Pr","Wt"))) %>%
+ggplot(aes(date,flux, group = date,fill=eco)) +
+  geom_violin()+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  facet_grid(eco~.,scales="free")+
+  scale_fill_viridis_d(option="G")+
+  theme(text = element_text(size=30),axis.text.y = element_text(size=18), legend.position = "none") +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  labs(title = "Monthly CO2 Fluxes ", y = expression( "Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+ggsave("plots/symposium/violins_co2_eco.png", height = 8, width = 15)
+
+```
+
+```{r boxplot-time-series}
+full_dataset %>%
+  filter(gas=="co2",photo==F) %>%
+ggplot(aes(date,flux, group = date)) +
+  geom_boxplot()+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  theme(text = element_text(size=30),axis.title.y=element_text(size=25)) +
+  geom_hline(yintercept = 0, linetype="dashed", size = 1) +
+  labs(title = "Monthly CO2 Fluxes ", y = expression( "Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+ggsave("plots/symposium/boxplots_co2_time_series.png", height = 6, width = 12)
+
+full_dataset %>%
+  filter(gas=="ch4") %>%
+ggplot(aes(date,flux, group = date)) +
+  geom_boxplot()+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  theme(text = element_text(size=30)) +
+  geom_hline(yintercept = 0, linetype="dashed", size = 1) +
+  labs(title = "Monthly CH4 Fluxes ", y = expression( "Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+ggsave("plots/symposium/boxplots_ch4_time_series.png", height = 6, width = 12)
+
+# full_dataset %>%
+#   filter(gas=="n2o") %>%
+# ggplot(aes(date,flux, group = date)) +
+#   geom_boxplot()+
+#   scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+#   theme_bw() +
+#   theme(text = element_text(size=15)) +
+#   geom_hline(yintercept = 0, linetype = "dashed", size = 1) +
+#   labs(title = "Monthly N2O Fluxes ", y = expression( "Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ), x = "Date")
+# ggsave("plots/symposium/boxplots_n2o_time_series.png", height = 5, width = 10)
+
+full_dataset %>%
+  filter(photo==FALSE,gas=="co2") %>%
+  ggplot(aes(date,flux,fill=eco,group=date)) +
+  geom_boxplot() +
+  facet_grid(eco~.,labeller = labeller(gas = gas.labs,date=date.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed") +
+  labs(title=expression("CO"[2]*" Fluxes Across Ecosystems"),x="Date",y = expression( "CO"[2]*" Flux ("*mu*"mol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme(text = element_text(size = 10),legend.position = "bottom",legend.text = element_text(size=7))+
+  theme_bw()
+ggsave("plots/symposium/boxplots_dates_co2.png",height=5,width=5)
+
+full_dataset %>%
+  filter(photo==FALSE,gas=="ch4") %>%
+  ggplot(aes(date,flux,fill=eco,group=date)) +
+  geom_boxplot() +
+  facet_grid(eco~.,labeller = labeller(gas = gas.labs,date=date.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed") +
+  labs(title=expression("CH"[4]*" Fluxes Across Ecosystems"),x="Date",y = expression( "CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme_bw()+
+  theme(axis.text.y=element_text(size=6),text=element_text(size=10),legend.position = "bottom",legend.text = element_text(size=7))
+ggsave("plots/symposium/boxplots_dates_ch4.png",height=5,width=5)
+
+full_dataset %>%
+  filter(photo==FALSE,gas=="n2o") %>%
+  ggplot(aes(date,flux,fill=eco,group=date)) +
+  geom_boxplot() +
+  facet_grid(eco~.,labeller = labeller(gas = gas.labs,date=date.labs))+
+  scale_fill_viridis_d(option="G",labels = eco.labs,begin=.5)+
+  geom_hline(yintercept=0,linetype="dashed") +
+  labs(title=expression("N"[2]*"O Fluxes Across Ecosystems"),x="Date",y = expression( "N"[2]*"O Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem") +
+  theme(text = element_text(size = 10),legend.position = "bottom",legend.text = element_text(size=7))+
+  theme_bw()
+ggsave("plots/symposium/boxplots_dates_n2o.png",height=5,width=5)
+
+```
+
+
+```{r moist-plots}
+# full_dataset %>%
+#   mutate(year = case_when(date < "2023-12-31" ~ "2023",
+#                           date>= "2024-01-01" ~ "2024")) %>%
+#   filter(year=="2024") %>%
+#   ggplot(aes(date,flux,group=date,fill=factor(date)))+
+#   geom_violin()+
+#   scale_fill_viridis_d(option="G")
+  
+full_dataset %>%
+  filter(photo==F,gas=="ch4") %>%
+  ggplot(aes(soil_moisture,flux,fill=eco))+
+  geom_point(shape=21,size=2)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  scale_fill_viridis_d(option = "G",labels=eco.labs)+
+  #scale_fill_manual(labels=eco.labs,values = c("#0c0304", "#3d356b", "#367ba3", "#4ac1ac", "#ddf6e5","#0c0304", "#3d356b", "#367ba3", "#4ac1ac", "#ddf6e5"))+
+  #facet_grid(eco~.)+
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem")+
+  theme(text=element_text(size=15),legend.position="bottom",legend.text = element_text(size=10))
+ggsave("plots/symposium/moist_flux_all_original.png",height=7,width=7)
+
+
+
+full_dataset %>%
+  filter(photo==F,gas=="ch4") %>%
+  mutate(year = case_when(date < "2023-12-31" ~ "2023",
+                          date>= "2024-01-01" ~ "2024")) %>%
+  ggplot(aes(soil_moisture,flux,fill=factor(date),group=year))+
+  geom_point(shape=21,size=2)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  scale_fill_manual(labels=eco.labs,values = c("#0c0304", "#3d356b", "#367ba3", "#4ac1ac", "#ddf6e5","#0c0304", "#3d356b", "#367ba3", "#4ac1ac", "#ddf6e5"))+
+  facet_grid(year~.)+
+  stat_poly_eq(use_label("eq","R2"))+
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Date")+
+  theme(text=element_text(size=15),legend.position="bottom",legend.text = element_text(size=10))
+ggsave("plots/symposium/moist_flux_all.png",height=7,width=7)
+
+# full_dataset %>%
+#   filter(photo==F,gas=="ch4",date!="2023-07-20") %>%
+#   ggplot(aes(soil_moisture,flux,fill=eco))+
+#   geom_point(shape=21)+
+#   geom_smooth(method="lm",color="black",fill="gray30")+
+#   theme_bw()+
+#   facet_wrap(.~date)+
+#   scale_fill_viridis_d(option="G")+
+#   labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ))+
+#   theme(text=element_text(size=15))
+# ggsave("plots/symposium/moist_flux_months.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="ch4",date!="2023-07-20",date!="2024-09-20") %>%
+  ggplot(aes(soil_moisture,flux,fill=eco))+
+  geom_point(shape=21)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  facet_grid(eco~.)+
+  stat_poly_eq(use_label("eq","R2"))+
+  geom_hline(yintercept=0,linetype="dashed")+
+  scale_fill_viridis_d(option="G",labels=eco.labs)+
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem")+
+  theme(text=element_text(size=15),legend.position="bottom")
+ggsave("plots/symposium/moist_flux_eco.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="ch4",date!="2023-07-20",date!="2024-09-20") %>%
+  ggplot(aes(soil_moisture,flux,fill=eco))+
+  geom_point(shape=21)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  facet_grid(eco~date)+
+  scale_fill_viridis_d(option="G",labels=eco.labs)+
+  geom_hline(yintercept=0,linetype="dashed")+
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ),fill="Ecosystem")+
+  theme(text=element_text(size=15),legend.position="bottom")
+ggsave("plots/symposium/moist_flux_eco_months.png",height=7,width=14)
+
+full_dataset %>%
+  filter(photo==F,gas=="ch4",date!="2023-07-20",date!="2024-09-20") %>%
+  ggplot(aes(soil_moisture,flux,fill=factor(pref)))+
+  geom_point(shape=21)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  theme_bw()+
+  facet_grid(eco~.)+
+  scale_fill_viridis_d(option="G")+
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ))+
+  theme(text=element_text(size=15))
+ggsave("plots/symposium/moist_flux_eco_transect.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="ch4") %>%
+  ggplot(aes(soil_temp,flux,fill=eco,color=eco))+
+  geom_point(shape=21,color="black")+
+  facet_grid(eco~pref,scales="free")+
+  geom_smooth(method="lm",fill="gray30")+
+  theme_bw()+
+  scale_fill_viridis_d(option="G")+
+  scale_color_viridis_d(option="G")
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ))+
+  theme(text=element_text(size=15))
+ggsave("plots/symposium/moist_flux_transect.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="ch4") %>%
+  ggplot(aes(soil_temp,flux,fill=eco,color=eco))+
+  geom_point(shape=21,color="black")+
+  facet_grid(date~pref)+
+  geom_smooth(method="lm",fill="gray30")+
+  theme_bw()+
+  scale_fill_viridis_d(option="G")+
+  scale_color_viridis_d(option="G")
+  labs(title=expression("CH"[4]*" Flux vs. Soil Moisture"),x="Volumetric Water Content (%)",y=expression("CH"[4]*" Flux (nmol GHG m"^{-2}*" s"^{-1}*")" ))+
+  theme(text=element_text(size=15))
+ggsave("plots/symposium/moist_flux_transect_months.png",height=7,width=7)
+
+full_dataset %>%
+  filter(photo==F,gas=="co2") %>%
+  ggplot(aes(soil_moisture, flux,fill=eco))+
+  geom_point(shape=21)+
+  #facet_grid(eco~.)+
+  geom_smooth(method="lm",color="black",fill="gray30")+
+  scale_fill_viridis_d(option="G")
+
+```
+
+
+
+```{r}
+full_dataset %>%
+  group_by(date,eco) %>%
+  mutate(average_soil_moisture = mean(soil_moisture, na.rm = T)) %>%
+  filter(gas=="ch4") %>%
+  ggplot(aes(date,soil_moisture,group=date,fill=eco)) +
+  facet_grid(eco~., scales = "free")+
+  scale_x_date(limits = c(ymd("2023-01-01"),ymd("2025-07-01")))+
+  theme_bw() +
+  scale_fill_viridis_d(option ="G")+
+  geom_violin()
+
+
+full_dataset %>%
+  filter(gas=="ch4") %>%
+  ggplot(aes(soil_moisture,flux)) +
+  geom_smooth(method="lm")+
+  geom_point()
+    
+full_dataset %>%
+  filter(gas=="ch4") %>%
+  ggplot(aes(soil_moisture,flux, fill=eco)) +
+  facet_grid(eco~.,scales="free")+
+  scale_fill_viridis_d(option ="G")+
+  geom_smooth(method="lm",color="black")+
+  geom_point(shape=21)
+
+full_dataset %>%
+  filter(gas=="ch4",date!="2023-07-20") %>%
+  ggplot(aes(soil_moisture,flux, fill=eco)) +
+  facet_grid(eco~date,scales="free")+
+  scale_fill_viridis_d(option ="G")+
+  geom_hline(yintercept = 0, color = "#1AB884", size = .75,alpha=0.5) +
+  geom_smooth(method="lm",color="black", fill="gray20")+
+  geom_point(shape=21)
+
+full_dataset %>%
+  filter(gas=="ch4",date!="2023-07-20",eco=="Wt") %>%
+  ggplot(aes(soil_moisture,flux, fill=eco)) +
+  facet_wrap(.~date,ncol=4)+
+  scale_fill_viridis_d(option ="G")+
+  geom_hline(yintercept = 0, color = "#1AB884", size = .75,alpha=0.5) +
+  geom_smooth(method="lm",color="black", fill="gray20")+
+  geom_point(shape=21)
+
+```
+
+
+
+
+
+
+```{r violins-2024}
+full_dataset %>%
+  filter(date>2024) %>%
+  ggplot(aes(eco,flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~date, labeller = labeller(gas = gas.labs, eco = eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 15))
+ggsave("plots/2024/violins_across_dates.png", width = 15, height = 10)
+
+all_data_2024 %>%
+  filter(photo == FALSE, date>2024) %>%
+  ggplot(aes(eco,flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~date, labeller = labeller(gas = gas.labs, eco = eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 15))
+ggsave("plots/2024/violins_across_dates_no_photo.png", width = 15, height = 10)
+
+# all_data %>%
+#   #filter(gas == "co2") %>%
+#   ggplot(aes(x = eco, y = flux, fill = eco)) +
+#   geom_violin() +
+#   facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+#   labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   theme_bw() +
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/ghg_violins.png")
+```
+
+```{r violins-across-years}
+full_dataset %>%
+  filter(eco == "NWd") %>%
+  ggplot(aes(factor(date),flux)) +
+  geom_violin(fill = "#0b0405") +
+  facet_grid(gas~.,labeller = labeller(gas = gas.labs),scales="free") +
+  labs(title = "GHG fluxes - North Woodland", x = "Sampling Date", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) ) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  scale_x_discrete(label = date.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 15))
+ggsave("plots/combined/violins_nwd.png", width = 15, height = 10)
+
+full_dataset %>%
+  filter(eco == "SWd") %>%
+  ggplot(aes(factor(date),flux)) +
+  geom_violin(fill = "#40498d") +
+  facet_grid(gas~.,labeller = labeller(gas = gas.labs),scales="free") +
+  labs(title = "GHG fluxes - South Woodland", x = "Sampling Date", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) ) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  scale_x_discrete(label = date.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 15))
+ggsave("plots/combined/violins_swd.png", width = 15, height = 10)
+
+full_dataset %>%
+  filter(eco == "Pr") %>%
+  ggplot(aes(factor(date),flux)) +
+  geom_violin(fill = "#38aaac") +
+  facet_grid(gas~.,labeller = labeller(gas = gas.labs),scales="free") +
+  labs(title = "GHG fluxes - Prairie", x = "Sampling Date", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) ) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  scale_x_discrete(label = date.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 15))
+ggsave("plots/combined/violins_pr.png", width = 15, height = 10)
+
+full_dataset %>%
+  filter(eco == "Wt") %>%
+  ggplot(aes(factor(date),flux)) +
+  geom_violin(fill = "#def5e5") +
+  facet_grid(gas~.,labeller = labeller(gas = gas.labs),scales="free") +
+  labs(title = "GHG fluxes - Wetland", x = "Sampling Date", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) ) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  scale_x_discrete(label = date.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 15))
+ggsave("plots/combined/violins_wt.png", width = 15, height = 10)
+
+full_dataset %>%
+  ggplot(aes(factor(date),flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~eco,labeller = labeller(gas = gas.labs, eco = eco.labs),scales="free") +
+  labs(title = "GHG fluxes across Ecosystems", x = "Sampling Date", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) ) +
+  geom_hline(yintercept = 0, color = "#1AB884", size = 1) +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  scale_x_discrete(label = element_blank())+
+  theme_bw() +
+  theme(text = element_text(size=20), axis.text.x = element_text(size = 10))
+ggsave("plots/combined/violins_all_eco.png", width = 15, height = 10)
+```
+
+```{r all-gas-temp-moisture}
+full_dataset %>%
+  ggplot(aes(soil_temp,flux,fill=eco)) +
+  geom_point(shape=21, size = 1.5)+
+  facet_grid(gas~date,scales="free")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs)
+
+full_dataset %>%
+  filter(date!="2023-07-20")%>%
+  ggplot(aes(soil_moisture,flux,fill=eco)) +
+  geom_point(shape=21, size = 1.5)+
+  facet_grid(gas~date,scales="free")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs)
+
+
+```
+
+
+
+
+
+```{r co2-temp-moisture-2024}
+all_data_2024 %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(soil_temp,flux, color = eco, fill = eco)) +
+  geom_point(shape = 21, size = 2, color = "black") +
+  geom_smooth(method = "lm")+
+  facet_grid(.~date, labeller = labeller(ecosystem = eco.labs), scales = "free")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs, end = .8) +
+  scale_color_viridis_d(option = "G",labels = eco.labs, end = .8)+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2024/co2_temp_all_months.png", width = 15, height = 10)
+
+all_data_2024 %>%
+  filter(gas == "co2",date=="2024-06-11") %>%
+  ggplot(aes(soil_temp,flux, color = eco,fill = eco)) +
+  geom_point(shape = 21, color = "black", size = 1.5) +
+  geom_smooth(method = "lm")+
+  #facet_grid(.~date, labeller = labeller(ecosystem = eco.labs), scales = "free")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  scale_color_viridis_d(option = "G",labels = eco.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2024/co2_temp_june.png", width = 10, height = 6)
+
+all_data_2024 %>%
+  filter(gas == "co2",date=="2024-07-26") %>%
+  ggplot(aes(soil_temp,flux, color = eco,fill = eco)) +
+  geom_point(shape = 21, color = "black", size = 1.5) +
+  geom_smooth(method = "lm")+
+  #facet_grid(.~date, labeller = labeller(ecosystem = eco.labs), scales = "free")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs, end = 0.95) +
+  scale_color_viridis_d(option = "G",labels = eco.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2024/co2_temp_july.png", width = 10, height = 6)
+
+
+```
+
+
+
+
+
+
+```{r read-nach-data, message = F, include = F}
+# nach_solar <- read_csv("data/weather_station/Nachusa_solar_radiation_20230711_20231017.csv")
+# nach_humid <- read_csv("data/weather_station/Nachusa_relative_humidity__20230711_20231017.csv")
+# nach_precip <- read_csv("data/weather_station/Nachusa_precipitation-inch_20230711_20231017.csv")
+# nach_air_temp_1 <- read_csv("data/weather_station/Nachusa_air-temperature-20230711_20231017.csv")
+# nach_air_temp_2 <- read_csv("data/weather_station/Nachusa_air-temperature_20221115_20230711.csv")
+```
+
+```{r nach-wrangling}
+nach_air_temp_2 <- nach_air_temp_2 %>%
+  filter (Year != 2022)
+
+nach_air_temp_2 <- nach_air_temp_2 %>%
+  mutate(date = parse_date_time(paste0(Year, "-", Month, "-", Day, " ", Time), "%y-%m-%d %I:%M:%S %p")) %>%
+  mutate(value = `air-temperature-f`) %>%
+  select(7,8)
+
+
+
+nach_weather <- nach_solar %>%
+  left_join(nach_humid, join_by(date), multiple = "all") %>%
+  left_join(nach_precip, join_by(date), multiple = "all") %>%
+  left_join(nach_air_temp_1, join_by(date), multiple = "all") %>%
+  bind_rows(nach_air_temp_2) %>%
+  select(!c(2:4, 6:8, 10:12, 14:16)) %>%
+  mutate(solar = value.x,
+        humid = value.y,
+        precip = value.x.x,
+        air_temp = case_when(is.na(value) ~ value.y.y,
+                              is.na(value.y.y) ~ value)) %>%
+  select(!c(2:6))
+```
+
+
+```{r fix-june-data}
+june <- june %>%
+  mutate(date = date.x) %>%
+  select(!date.x&!date.y)
+```
+
+```{r combine-months}
+all_data <- bind_rows(june,july,sep,oct,nov)
+all_data <- all_data %>%
+  mutate(date = ymd(date),
+         ecosystem = fct_relevel(ecosystem, c(
+                                 "NWd",
+                                 "NWdP",
+                                 "SWd",
+                                 "SWdP",
+                                 "Pr",
+                                 "PrP",
+                                 "Wt",
+                                 "WtP")),
+         eco = fct_relevel(eco, c(
+                                "Pr",
+                                "Wt",
+                                "NWd",
+                                "SWd"
+         )),
+         gas = fct_relevel(gas, c(
+                                 "co2",
+                                 "ch4",
+                                 "n2o")))
+```
+
+```{r photo-rate}
+mod_data <- all_data %>%
+  filter(photo == TRUE) %>%
+  select(!c(4:15)) %>%
+  #group_by(date) %>%
+  pivot_wider(names_from = suff, values_from = c(flux, air_temp, soil_temp, soil_moisture)) %>%
+  mutate(photo_rate = flux_2 - flux_1,
+         chamber = paste0(ecosystem, pref))%>%
+  select(!c(1,2,4))%>%
+  select(13,12,1,3, everything())
+```
+
+```{r radiative-balance}
+rad_bal <- all_data %>%
+  filter(photo == F, gas != "co2") %>%
+  group_by (gas) %>%
+  summarize(med_flux = median(flux))
+
+rad_bal %>%
+  mutate(med_flux_kg = case_when(gas == "ch4" ~ med_flux*.01604/1E3*31.536,
+                                 gas == "n2o" ~ med_flux*.044013/1E3*31.536),
+         med_flux_co2_eq = case_when(gas == "ch4" ~ med_flux_kg*203,
+                                     gas == "n2o" ~ med_flux_kg*270))
+
+rad_bal_test <- all_data %>%
+  filter(photo == F) %>%
+  group_by (gas,eco) %>%
+  summarize(med_flux = median(flux))
+
+rad_bal_test_2 <- all_data %>%
+  filter(photo == F) %>%
+  group_by (gas) %>%
+  summarize(med_flux = median(flux))
+
+nee <- all_data %>%
+  filter(photo == T, suff == 1) %>%
+  summarize(med_flux = median(flux),
+            mean_flux = mean(flux)) %>%
+  mutate(med_flux_kg = med_flux*.04401*31.356,
+         mean_flux_kg = mean_flux*.04401*31.356)
+
+rad_bal_test <- rad_bal_test %>%
+  mutate(med_flux_kg = case_when(gas == "co2" ~ med_flux*.04401*31.356,
+                                 gas == "ch4" ~ med_flux*.01604/1E3*31.536,
+                                 gas == "n2o" ~ med_flux*.044013/1E3*31.536),
+         med_flux_co2_eq = case_when(gas == "ch4" ~ med_flux_kg*203,
+                                     gas == "n2o" & med_flux_kg>0 ~ med_flux_kg*270,
+                                     gas == "n2o" & med_flux_kg<0 ~ med_flux_kg*349,
+                                     .default = med_flux_kg))
+
+rad_bal_test_2 <- rad_bal_test_2 %>%
+  mutate(med_flux_kg = case_when(gas == "co2" ~ med_flux*.04401*31.356,
+                                 gas == "ch4" ~ med_flux*.01604/1E3*31.536,
+                                 gas == "n2o" ~ med_flux*.044013/1E3*31.536),
+         med_flux_co2_eq = case_when(gas == "ch4" ~ med_flux_kg*203,
+                                     gas == "n2o" ~ med_flux_kg*270,
+                                     .default = med_flux_kg))
+
+nee
+rad_bal_test
+rad_bal_test_2
+```
+
+
+```{r plot-labels}
+eco.labs <- c("Prairie", "Wet Prairie", "North Woodlands", "South Woodlands")
+names(eco.labs) <- c("Pr", "Wt", "NWd", "SWd")
+gas.labs <- c("CO2", "CH4", "N2O")
+names(gas.labs) <- c("co2", "ch4","n2o")
+date.labs <- c("June", "July", "September", "October", "November")
+names(date.labs) <- c("2023-06-07", "2023-07-20", "2023-09-09", "2023-10-14", "2023-11-11")
+photo.labs <- c("Sunlight", "Covered")
+names(photo.labs) <- c(1,2)
+```
+
+```{r 2022-wrangling, message = F, include =F}
+data_2022 <- read_csv("data/2022_full_dataset.csv")
+
+combined <- bind_rows(all_data, data_2022) %>%
+  select(!c(5:15)) %>%
+  mutate(eco = case_when(ecosystem == "BP" ~ "Pr",
+                         ecosystem == "SP" ~ "Pr",
+                         ecosystem == "EW" ~ "Wood",
+                         ecosystem == "WW" ~ "Wood",
+                         eco == "NWd" ~ "Wood",
+                         eco == "SWd" ~ "Wood",
+                         ecosystem == "SW" ~ "Wt",
+                         TRUE ~ eco),
+         soil_temp = case_when(is.na(soil_temp) ~ soil_temperature,
+                               TRUE ~ soil_temp),
+         year = case_when(date %in% c("2022-07-12",
+                                    "2022-08-18",
+                                    "2022-09-24",
+                                    "2022-10-22") ~ "2022",
+                          date %in% c("2023-06-07",
+                                    "2023-07-20",
+                                    "2023-09-09",
+                                    "2023-10-14",
+                                    "2023-11-11") ~ "2023"),
+         year = as.integer(year))
+
+```
+
+
+```{r plots}
+all_data %>%
+  #filter(gas == "co2") %>%
+  ggplot(aes(x = eco, y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/ghg_violins.png")
+
+all_data %>%
+  filter(photo == F) %>%
+  ggplot(aes(x = eco, y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ), fill="Ecosystem" )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs, begin = .5) +
+  geom_hline(yintercept = 0,linetype="dashed", linewidth = 1)+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/ghg_violins_no_p.png", height = 7, width = 7)
+
+all_data %>%
+  filter(photo == F) %>%
+  ggplot(aes(x = eco, y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ), fill="Ecosystem" )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs, begin = .5) +
+  geom_hline(yintercept = 0,linetype="dashed", linewidth = 1)+
+  theme_bw() +
+  theme(text = element_text(size=18))
+ggsave("plots/2023/edit_ghg_violins_no_p.png", height = 4.5, width = 7)
+
+all_data %>%
+  #filter(gas == "co2") %>%
+  ggplot(aes(x = factor(date), y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~eco, labeller = labeller(gas = gas.labs, eco= eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  scale_x_discrete(labels = date.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20, face = "bold"))
+ggsave("plots/2023/ghg_violins_across_months.png", height = 8, width = 18)
+
+all_data %>%
+  filter(photo == F) %>%
+  ggplot(aes(x = factor(date), y = flux, fill = eco)) +
+  geom_violin() +
+  facet_grid(gas~eco, labeller = labeller(gas = gas.labs, eco= eco.labs), scales = "free") +
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  scale_x_discrete(labels = date.labs)+
+  theme_bw() +
+  theme(text = element_text(size=20, face = "bold"))
+ggsave("plots/2023/ghg_violins_across_months_no_p.png", height = 8, width = 18)
+
+all_data %>%
+  filter(date != "2023-07-20") %>%
+  ggplot(aes(soil_moisture, flux, fill = eco)) +
+  geom_point(shape = 21, color = "black", size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(gas~date, scales = "free", labeller = labeller(date = date.labs, gas = gas.labs)) +
+  labs(title = "Gas Fluxes vs. Soil Water Content Across Months", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Water Content (%)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=25))
+ggsave("plots/2023/moisture/all_flux_n_moisture.png", width = 20, height = 12)
+
+all_data %>%
+  ggplot(aes(soil_temp, flux, fill = eco)) +
+  geom_point(shape = 21, color = "black", size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(gas~date, scales = "free", labeller = labeller(gas = gas.labs, date = date.labs)) +
+  labs(title = "Gas Fluxes vs. Soil Temperature Across Months", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Temperature (C)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=25))
+ggsave("plots/2023/temperature/all_flux_n_temp.png", width = 30, height = 12)
+
+all_data %>%
+  ggplot(aes(soil_temp, flux, fill = factor(date))) +
+  geom_point(shape = 21, color = "black", size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(gas~eco, scales = "free", labeller = labeller(gas = gas.labs, eco = eco.labs)) +
+  labs(title = "Gas Fluxes vs. Soil Temperature", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Temperature (C)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=25))
+ggsave("plots/2023/temperature/flux_n_temp_no_date.png", width = 20, height = 12)
+
+all_data %>%
+  filter(photo == TRUE, gas == "co2") %>%
+  ggplot(aes(soil_temp, flux, fill = eco, color = factor(suff))) +
+  geom_point(shape = 21, stroke = 1, size = 3) +
+  geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(date~suff, scales = "free", labeller = labeller(date = date.labs, suff = photo.labs)) +
+  labs(title = "Gas Fluxes vs. Soil Temperature Across Months", y = expression("Flux (nmol N"[2]*"O m"^{-2}*" s"^{-1}*")"), x = "Temperature (C)") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/photo/photo_n_temp.png", width = 20, height = 12)
+
+all_data %>%
+  ggplot(aes(factor(date), soil_temp, fill = eco)) +
+  geom_boxplot() +
+  #geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
+  facet_grid(.~eco, scales = "free", labeller = labeller(eco = eco.labs)) +
+  labs(title = "Soil Temperature Across Months ", y = "Soil Temperature (°C)", x = "Date") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs) +
+  scale_x_discrete(labels = date.labs) +
+  #guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave("plots/2023/temperature/temp_n_date.png", width = 20, height = 8)
+
+```
+
+```{r nach-weather-plots, include=F}
+# nach_weather %>%
+#   ggplot(aes(date, humid)) +
+#   geom_line() +
+#   labs(title = "Humidity at Nachusa", y = "% Humidity", x = "Date") +
+#   #guides(guide_legend(title = "Ecosystem"))+
+#   theme_bw() +
+#   theme(text = element_text(size=20))+
+#   geom_vline(xintercept = c(ymd_hms("2023-07-20 12:00:00", tz=""),ymd_hms("2023-09-09 12:00:00", tz=""),ymd_hms("2023-10-14 12:00:00", tz="")), color="red")
+# ggsave("plots/2023/weather/humidity.png", width = 20, height = 8)
+
+nach_weather %>%
+  ggplot(aes(date, solar)) +
+  geom_line() +
+  labs(title = "Solar Radiation at Nachusa", y = expression("Solar Radiation (W m"^{-2}*")"), x = "Date") +
+  #guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=30))+
+  geom_vline(xintercept = c(ymd_hms("2023-07-20 12:00:00", tz=""),ymd_hms("2023-09-09 12:00:00", tz=""),ymd_hms("2023-10-14 12:00:00", tz="")), color="red")
+ggsave("plots/2023/weather/solar_radiation.png", units = "in", width = 9, height = 3.6)
+
+nach_weather %>%
+  filter(date>"2023-05-01")%>%
+  mutate(day=strftime(date,format="%y-%m-%d"))%>%
+  group_by(day)%>%
+  mutate(med_precip=median(precip),mean_precip=mean(precip))%>%
+  ggplot(aes(date, mean_precip)) +
+  geom_line(linewidth=.8) +
+  #geom_line(aes(y=med_precip),color="lightskyblue1")+
+  labs(title = "Mean Daily Precipitation at Nachusa", y = "Precipitation (in)", x = "Date") +
+  #guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=30))+
+  scale_x_datetime(expand = (expansion(add = c(0,86400*30)))) +
+  geom_vline(xintercept = c(ymd_hms("2023-06-07 12:00:00", tz=""), ymd_hms("2023-07-20 12:00:00", tz=""),ymd_hms("2023-09-09 12:00:00", tz=""),ymd_hms("2023-10-14 12:00:00", tz=""),ymd_hms("2023-11-11 12:00:00", tz="")), color="red")
+ggsave("plots/2023/weather/precip.png", units = "in", width = 12, height = 6)
+
+nach_weather %>%
+  filter(date>"2023-05-01")%>%
+  mutate(air_temp = (air_temp - 32)/1.8,day=strftime(date,format="%y-%m-%d"))%>%
+  group_by(day)%>%
+  mutate(med_air_temp = median(air_temp),mean_air_temp = mean(air_temp))%>%
+  ggplot(aes(date, mean_air_temp)) +
+  #geom_point(shape=21,fill="lightskyblue1",alpha=.3,size=.5)+
+  geom_line(linewidth=.8) +
+  #geom_line(aes(y=med_air_temp),color="royalblue")+
+  labs(title = "Mean Daily Air Temperature at Nachusa", y = "Temperature (ºC)", x = "Date") +
+  #guides(guide_legend(title = "Ecosystem"))+
+  theme_bw() +
+  theme(text = element_text(size=30))+
+  scale_x_datetime(expand = (expansion(add = c(0,86400*30)))) +
+  geom_vline(xintercept = c(ymd_hms("2023-06-07 12:00:00", tz=""), ymd_hms("2023-07-20 12:00:00", tz=""),ymd_hms("2023-09-09 12:00:00", tz=""),ymd_hms("2023-10-14 12:00:00", tz=""),ymd_hms("2023-11-11 12:00:00", tz="")), color="red")
+ggsave("plots/2023/weather/air_temp.png", units = "in", width = 12, height = 6)
+```
+
+
+```{r more-plots}
+# mod_data %>%
+#   ggplot(aes(chamber, photo_rate, fill = factor(date), shape = factor(date) )) +
+#   geom_point(color = "black", size = 3) +
+#   #facet_grid(date~., scales = "free", labeller = labeller(date = date.labs)) +
+#   labs(title = "Estimated Photosynthetic Rate", y = expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x = "Chamber") +
+#   scale_fill_viridis_d(option = "G",labels = date.labs) +
+#   scale_shape_manual(values = c(21:25), labels = date.labs)+
+#   theme_bw() +
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/photo/photo_rate_no_date.png", width = 20, height = 8)
+# 
+# mod_data %>%
+#   ggplot(aes(chamber, photo_rate, fill = eco)) +
+#   geom_point(color = "black", size = 3, shape = 21) +
+#   facet_grid(.~date, scales = "free", labeller = labeller(date = date.labs)) +
+#   labs(title = "Estimated Photosynthetic Rate", y = expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x = "Chamber") +
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   #scale_shape_manual(values = c(21:25), labels = date.labs)+
+#   theme_bw() +
+#   theme(text = element_text(size=20),axis.text.x = element_text(angle = -90, vjust = 0.5, hjust=1))
+# ggsave("plots/2023/photo/photo_rate_date.png", width = 20, height = 8)
+
+mod_data %>%
+  filter(photo_rate >0) %>%
+  ggplot(aes(fct_relevel(chamber, c(
+    "PrP1",
+    "PrP2",
+    "PrP3",
+    "WtP1",
+    "WtP2",
+    "WtP3",
+    "WtP4",
+    "NWdP1",
+    "NWdP2",
+    "NWdP3",
+    "SWdP1",
+    "SWdP2",
+    "SWdP3"
+  )), fill = eco)) +
+  geom_point(color = "black", size = 4, shape = 21, aes(y = flux_1)) +
+  geom_point(color = "black", size = 3, shape = 24, aes(y = flux_2)) +
+  geom_segment(aes(x = chamber, xend = chamber, y = flux_1, yend = flux_2))+
+  facet_grid(.~date, scales = "free", labeller = labeller(date = date.labs)) +
+  labs(title = "Net Soil CO2 Exchange", y = expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x = "Chamber", fill = "Ecosystem") +
+  scale_fill_viridis_d(option = "G",labels = eco.labs, begin = .3) +
+  #scale_shape_manual(values = c(21:25), labels = date.labs)+
+  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 1)+
+  theme_bw() +
+  theme(text = element_text(size=30),axis.text.x = element_blank())
+ggsave("plots/2023/photo/cov_uncov_date.png", unit = "in", height = 12, width = 24)
+
+# combined %>%
+#   filter(gas == "co2", is.na(eco) == F) %>%
+#   ggplot(aes(soil_temp, flux, fill = eco)) +
+#   geom_point(color = "black", size = 3, shape = 21) +
+#   facet_grid(.~year, scales = "free")+
+#   labs(title = "CO2 Flux vs. Soil Temperature Across Years", y=expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x="Soil Temperature (ºC)")+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   theme_bw()+
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/temperature/co2_yearly.png", width = 20, height = 8)
+
+co2_model_data <- all_data %>%
+  filter(photo == F, gas == "co2")
+
+summ(lm(flux ~ soil_temp, data = co2_model_data))
+
+co2_model_data %>%
+  ggplot(aes(soil_temp, flux, fill = eco)) +
+  geom_point(color = "black", size = 4, shape = 21) +
+  geom_smooth(method="lm",color = "black", fill = "gray50")+
+  labs(title = "CO2 Flux vs. Soil Temperature", y=expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x="Soil Temperature (ºC)",fill="Ecosystem")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs,begin=.3) +
+  theme_bw()+
+  theme(text = element_text(size=30))+
+  annotate("text", x = 10, y = 6, label = "R ^ 2 == 0.42", parse = T, size = 8)+
+  annotate("text", x = 10, y = 5.6, label = "p < 0.05", parse = T, size = 8)+
+  annotate("text", x = 10, y = 6.35, label = "y == .17*x - .66", parse = T, size = 8)
+
+ggsave("plots/2023/temperature/co2_temp_line.png", unit = "in", width = 13.6, height = 13.6)
+
+# combined %>%
+#   filter(gas == "co2", is.na(eco) == F) %>%
+#   ggplot(aes(soil_temp, flux, fill = eco)) +
+#   geom_point(color = "black", size = 4, shape = 21) +
+#   geom_smooth(method="lm",color = "black", fill = "gray50")+
+#   facet_grid(.~year, scales = "free")+
+#   labs(title = "CO2 Flux vs. Soil Temperature Across Years", y=expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x="Soil Temperature (ºC)")+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   theme_bw()+
+#   theme(text = element_text(size=30))
+# ggsave("plots/2023/temperature/co2_yearly_line.png", width = 20, height = 8)
+
+# combined %>%
+#   filter(gas == "co2", is.na(eco) == F) %>%
+#   ggplot(aes(soil_temp, flux, fill = eco)) +
+#   geom_point(color = "black", size = 4, shape = 21) +
+#   geom_smooth(method="lm", aes(color = eco, fill = eco))+
+#   facet_grid(.~year, scales = "free")+
+#   labs(title = "CO2 Flux vs. Soil Temperature Across Years", y=expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x="Soil Temperature (ºC)")+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs, end = .85) +
+#   scale_color_viridis_d(option = "G",labels = eco.labs, end = .85) +
+#   theme_bw()+
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/temperature/co2_yearly_lines.png", width = 20, height = 8)
+# 
+# combined %>%
+#   filter(gas == "co2", is.na(eco) == F) %>%
+#   ggplot(aes(soil_temp, flux, fill = factor(year))) +
+#   geom_point(color = "black", size = 3, shape = 21) +
+#   geom_smooth(method = "lm", aes(color = factor(year), fill = factor(year)))+
+#   facet_grid(.~eco, scales = "free")+
+#   labs(title = "CO2 Flux vs. Soil Temperature Across Years", y=expression("Flux ("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*")"), x="Soil Temperature (ºC)")+
+#   scale_fill_viridis_d(option = "G", end = .75) +
+#   scale_color_viridis_d(option = "G", end = .75)+
+#   theme_bw()+
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/temperature/co2_yearly_eco.png", width = 20, height = 8)
+# 
+# combined %>%
+#   filter(gas == "ch4", is.na(eco) == F) %>%
+#   ggplot(aes(soil_moisture, flux, fill = eco)) +
+#   geom_point(color = "black", size = 3, shape = 21) +
+#   facet_grid(.~year, scales = "free")+
+#   labs(title = "CH4 Flux vs. Soil Moisture Across Years", y=expression("Flux (nmol CH"[4]*" m"^{-2}*" s"^{-1}*")"), x="Soil Moisture (%)")+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   theme_bw()+
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/moisture/ch4_yearly.png", width = 20, height = 8)
+
+# combined %>%
+#   filter(gas == "ch4", is.na(eco) == F) %>%
+#   ggplot(aes(soil_moisture, flux, fill = eco)) +
+#   geom_point(color = "black", size = 4, shape = 21) +
+#   geom_smooth(method="lm", color = "black", fill = "gray50")+
+#   facet_grid(.~year, scales = "free")+
+#   labs(title = "CH4 Flux vs. Soil Moisture Across Years", y=expression("Flux (nmol CH"[4]*" m"^{-2}*" s"^{-1}*")"), x="Soil Moisture (%)")+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs, end = .85) +
+#   scale_color_viridis_d(option = "G",labels = eco.labs, end = .85) +
+#   theme_bw()+
+#   theme(text = element_text(size=30))
+# ggsave("plots/2023/moisture/ch4_yearly_line.png", width = 20, height = 8)
+
+ch4_model_data <- all_data %>%
+  filter(photo == F, gas == "ch4")
+
+summ(lm(flux ~ soil_moisture, data = ch4_model_data))
+
+ch4_model_data %>%
+  ggplot(aes(soil_moisture, flux, fill = eco)) +
+  geom_point(color = "black", size = 4, shape = 21) +
+  geom_smooth(method="lm", color = "black", fill = "gray50")+
+  labs(title = "CH4 Flux vs. Soil Moisture", y=expression("Flux (nmol CH"[4]*" m"^{-2}*" s"^{-1}*")"), x="Soil Moisture (%)",fill="Ecosystem")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs, begin = .3) +
+  #scale_color_viridis_d(option = "G",labels = eco.labs, end = .85) +
+  theme_bw()+
+  theme(text = element_text(size=30))+
+  annotate("text", x = 20, y = 1.8, label = "R ^ 2 == 0.13", parse = T, size = 8)+
+  annotate("text", x = 20, y = 1.6, label = "p < 0.05", parse = T, size = 8)+
+  annotate("text", x = 20, y = 1.95, label = "y == .02*x - .71", parse = T, size = 8)
+
+ggsave("plots/2023/moisture/ch4_moisture_line.png", unit = "in", width = 13.6, height = 13.6)
+
+# combined %>%
+#   filter(gas == "ch4", is.na(eco) == F) %>%
+#   ggplot(aes(soil_moisture, flux, fill = eco)) +
+#   geom_point(color = "black", size = 3, shape = 21) +
+#   geom_smooth(method="lm", aes(color = eco, fill = eco))+
+#   facet_grid(.~year, scales = "free")+
+#   labs(title = "CH4 Flux vs. Soil Moisture Across Years", y=expression("Flux (nmol CH"[4]*" m"^{-2}*" s"^{-1}*")"), x="Soil Moisture (%)")+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs, end = .85) +
+#   scale_color_viridis_d(option = "G",labels = eco.labs, end = .85) +
+#   theme_bw()+
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/moisture/ch4_yearly_lines.png", width = 20, height = 8)
+# 
+# combined %>%
+#   filter(gas == "ch4", is.na(eco) == F) %>%
+#   ggplot(aes(soil_moisture, flux, fill = factor(year))) +
+#   geom_point(color = "black", size = 3, shape = 21) +
+#   geom_smooth(method = "lm", aes(color = factor(year), fill = factor(year)))+
+#   facet_grid(.~eco, scales = "free")+
+#   labs(title = "CH4 Flux vs. Soil Moisture Across Years", y=expression("Flux (nmol CH"[4]*" m"^{-2}*" s"^{-1}*")"), x="Soil Temperature (ºC)")+
+#   scale_fill_viridis_d(option = "G", end = .75) +
+#   scale_color_viridis_d(option = "G", end = .75)+
+#   theme_bw()+
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/moisture/ch4_yearly_eco.png", width = 20, height = 8)
+
+# all_data %>%
+#   #filter(gas == "co2") %>%
+#   ggplot(aes(x = eco, y = flux, fill = eco)) +
+#   geom_boxplot() +
+#   facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+#   labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   theme_bw() +
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/ghg_boxplots.png", width=15, height = 8)
+# 
+# all_data %>%
+#   filter(photo == F) %>%
+#   ggplot(aes(x = eco, y = flux, fill = eco)) +
+#   geom_boxplot() +
+#   facet_grid(gas~., labeller = labeller(gas = gas.labs, ecosystem = eco.labs), scales = "free") +
+#   labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   theme_bw() +
+#   theme(text = element_text(size=20))
+# ggsave("plots/2023/ghg_boxplots_no_p.png", width=15, height=8)
+# 
+# all_data %>%
+#   #filter(gas == "co2") %>%
+#   ggplot(aes(x = factor(date), y = flux, fill = eco)) +
+#   geom_boxplot() +
+#   facet_grid(gas~eco, labeller = labeller(gas = gas.labs, eco= eco.labs), scales = "free") +
+#   labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ) )+
+#   scale_fill_viridis_d(option = "G",labels = eco.labs) +
+#   scale_x_discrete(labels = date.labs)+
+#   theme_bw() +
+#   theme(text = element_text(size=20, face = "bold"))
+# ggsave("plots/2023/ghg_boxplots_across_months.png", height = 8, width = 18)
+
+all_data %>%
+  filter(photo == F) %>%
+  ggplot(aes(x = factor(date), y = flux, fill = eco)) +
+  geom_boxplot(linewidth=.75) +
+  #facet_grid(gas~eco, labeller = labeller(gas = gas.labs, eco= eco.labs), scales = "free") +
+  facet_wrap(gas~.)+
+  labs(title = "GHG fluxes across ecosystems", x = "Ecosystem", y = expression( "Flux ("*mu*"/nmol GHG m"^{-2}*" s"^{-1}*")" ), fill="Ecosystem")+
+  scale_fill_viridis_d(option = "G",labels = eco.labs,begin=.5) +
+  scale_x_discrete(labels = date.labs)+
+  geom_hline(yintercept=0,linetype="dashed",linewidth=1.5)+
+  theme_bw() +
+  theme(text = element_text(size=32),axis.text.x = element_text(angle = -90, vjust = .65, hjust=.1, size=25),legend.text = element_text(size=28))
+
+ggsave("plots/2023/demo_ghg_boxplots_across_months_no_p.png", width = 18, height = 18)
+
+
+```
+
+
+```{r solar-data, message=F, include = F}
+nach_solar <- read_csv("data/Nachusa_solar_radiation_20230711_20231017.csv")
+our_solar <- bind_rows(read_csv("data/230607_230909_nachusa_par.csv"),read_csv("data/230910_231111_nachusa_par.csv"))
+sun_times <- read_csv("data/2023_sun_times.csv")
+
+our_solar <- our_solar %>%
+  separate("Date", into = c("date", "time"), sep = 11) %>%
+  mutate(time = gsub("at ","",time))
+
+our_solar <- our_solar %>%
+  separate("time", into = c("time", "am_pm"), sep = -3) %>%
+  mutate(date = mdy(date), time = as_hms(time)) %>%
+  mutate(time = case_when(am_pm == " PM" ~ time + (12*3600),
+                           .default = time)) %>%
+  select(!am_pm)
+
+test <- sun_times %>%
+  mutate(time_begin = round_hms(time_begin, digits = -2),
+         time_end = round_hms(time_end, digits = -2))
+test
+# left_join(sun_times, our_solar, by = )
+```
+

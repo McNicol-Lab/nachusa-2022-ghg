@@ -6,8 +6,8 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "~/Documents/R Code/nachusa-viz/")
+#knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_knit$set(root.dir = "~/Documents/R Code/nachusa-viz/")
 ```
 
 ```{r load-packages, message= F, include=F}
@@ -94,13 +94,13 @@ full_data %>%
 ```
 
 ```{r plot-fluxes, fig.height=7, echo = F, message=F, eval=F}
-# full_data %>%
-#   filter(gas == "co2") %>%
-#   ggplot(aes(rep, flux)) +
-#   geom_point() +
-#   geom_smooth(method = "lm") +
-#   facet_grid(ecosystem~date, scales="free_y") +
-#   labs(title = "Carbon dioxide fluxes by ecosystem")
+full_data %>%
+  filter(gas == "co2") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date, scales="free_y") +
+  labs(title = "Carbon dioxide fluxes by ecosystem")
 # 
 # full_data %>%
 #   filter(gas == "co2") %>%
@@ -109,13 +109,13 @@ full_data %>%
 #   facet_wrap(~date, scales="free_y") +
 #   labs(title = "Carbon dioxide boxplots")
 # 
-# full_data %>%
-#   filter(gas == "ch4") %>%
-#   ggplot(aes(rep, flux)) +
-#   geom_point() +
-#   geom_smooth(method = "lm") +
-#   facet_grid(ecosystem~date, scales="free_y") +
-#   labs(title = "Methane fluxes by ecosystem")
+full_data %>%
+  filter(gas == "ch4") %>%
+  ggplot(aes(rep, flux)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_grid(ecosystem~date, scales="free_y") +
+  labs(title = "Methane fluxes by ecosystem")
 # 
 # full_data %>%
 #   filter(gas == "ch4") %>%
@@ -141,8 +141,7 @@ full_data %>%
 ```
 
 ```{r remove-potential-outliers, include=F}
-full_data <-
-  full_data %>%
+full_data <- full_data %>%
   filter( case_when(date != "2022-07-12" ~ T,
                    gas != "ch4" ~ T,
                    ecosystem != "BP" ~ T,
@@ -189,8 +188,29 @@ mod_data <-
 
 ```
 
+```{r add-eco-variable}
+full_data %>%
+  mutate(eco = case_when(ecosystem == "BP" ~ "prairie",
+                         ecosystem == "SP" ~ "prairie",
+                         ecosystem == "EW" ~ "woodland",
+                         ecosystem == "WW" ~ "woodland",
+                         ecosystem == "SW" ~ "wetland",
+                         ecosystem == "NW" ~ "wetland",
+                         .default = as.character(ecosystem))) %>%
+  write_csv("data/2022_full_data.csv")
+
+
+```
+
+
+
+
 ```{r write-to-csv}
 write_csv(mod_data, "data/2022_full_dataset.csv")
+```
+
+```{r read-csv}
+mod_data <- read_csv("data/2022_full_dataset.csv")
 ```
 
 
@@ -402,7 +422,7 @@ mod_data %>%
 ggsave("plots/temperature/all_flux_n_temp_2.png", width = 30, height = 12)
 
 mod_data %>%
-  filter(date != "2022-07-12") %>%
+  #filter(date != "2022-07-12") %>%
   ggplot(aes(factor(date), soil_temperature, fill = ecosystem)) +
   geom_boxplot() +
   #geom_smooth(method = "lm", color = "black", fill = "gray50" ) +
@@ -705,5 +725,23 @@ nachusa_hyp_test(mod_data, 17),
 nachusa_hyp_test(mod_data, 18)
 )%>%
   bind_cols(temp)
+```
+
+```{r metadata-for-microbes}
+full_data %>%
+  filter(date=="2022-09-24") %>%
+  mutate(chamber=paste(ecosystem,rep,sep="-")) %>%
+  select(12,8,3,6,7,10,11,4,5,9,1,2) %>%
+  write_csv("data/2022_full_metadata.csv")
+
+full_data %>%
+  filter(date=="2022-09-24") %>%
+  mutate(chamber=paste(ecosystem,rep,sep="-")) %>%
+  select(12,8,3,6,7,10,11,4,5,9,1,2) %>%
+  filter(chamber %in% c("WW-1","WW-2","WW-3","WW-4","WW-5","WW-9","BP-1","BP-2","BP-3","BP-4","BP-5","BP-9","SW-1","SW-2","SW-3","SW-4","SW-5","SW-9","EW-1","EW-5","EW-9","NW-1","NW-5","NW-9","SP-1","SP-5","SP-9"))%>%
+write_csv("data/2022_metadata_samples_only.csv")
+
+
+
 ```
 
