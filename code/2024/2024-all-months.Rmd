@@ -20,6 +20,7 @@ library(chron)
 library(hms)
 library(jtools)
 library(ggpmisc)
+library(usethis)
 ```
 
 ```{r read-data}
