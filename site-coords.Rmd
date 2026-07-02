@@ -1,0 +1,60 @@
+---
+title: "Methods Figures"
+author: "Gavin McNicol"
+date: "2026-07-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+load map libraries
+
+```{r}
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(ggspatial)      # for basemap
+library(patchwork)
+library(prettymapr)
+
+```
+
+Site coords
+
+```{r}
+coords <- tibble(
+  site = c(
+    "Wd-1",
+    "Wd-2",
+    "Pr-1",
+    "Pr-2",
+    "Wt-1",
+    "Wt-2"
+  ),
+  lat = c(
+    41.8944391,
+    41.8942260,
+    41.8938255,
+    41.8948141,
+    41.8942857,
+    41.8934611
+  ),
+  lon = c(
+    -89.3792934,
+    -89.3769692,
+    -89.3757784,
+    -89.3770264,
+    -89.3780569,
+    -89.3773216
+  )
+)
+```
+
+```{r}
+write_csv(coords, "2022-site-coords.csv")
+```
+
+
+
