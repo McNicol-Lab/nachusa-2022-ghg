@@ -70,18 +70,44 @@ data <- data %>%
 
 # Flux QC 
 
-If `p.value` < 0.05, set flux to `NA` for CO2, and zero for CH4/N2O (bad p-value for CO2 is likely bad flux overall)
-Set very high woodland CO2 emissions (> 9) related to ant burrow to `NA`
+**Logic table:**
+
+Situation,                              CO2,  CH4,  N2O
+CO2 p > 0.05 or CO2 flux > 9*,           NA,   NA,   NA
+"CO2 is good, but CH4/N2O p > 0.05",    keep, 0,    0
+CO2 is good and CH4/N2O p ≤ 0.05,       keep, keep, keep
+
+*Set very high woodland CO2 emissions (> 9) related to ant burrow to `NA`
 
 ```{r flux-qc}
-data <- data %>% 
-  mutate(flux = 
-           case_when(
-             p.value > 0.05 & gas == "co2" ~ NA,
-             p.value > 0.05 & gas %in% c("ch4", "n2o") ~ 0,
-             gas == "co2" & flux > 9 ~ NA,
-             TRUE ~ flux
-           ))
+data <- data %>%
+  group_by(date, cover, site, transect, rep) %>%
+  mutate(
+    # Extract the CO2 values for this chamber measurement
+    co2_p     = p.value[gas == "co2"][1],
+    co2_flux  = flux[gas == "co2"][1],
+    
+    # Flag bad analytical process / injection based on CO2
+    bad_injection = (is.na(co2_p) | co2_p > 0.05) | 
+                    (!is.na(co2_flux) & co2_flux > 9)
+  ) %>%
+  mutate(
+    flux = case_when(
+      # Everything from a bad injection becomes NA
+      bad_injection ~ NA_real_,
+      
+      # CO2 that passed the checks keeps its value
+      gas == "co2" ~ flux,
+      
+      # CH4 / N2O with non-significant slope → 0 (only if injection was good)
+      gas %in% c("ch4", "n2o") & p.value > 0.05 ~ 0,
+      
+      # Otherwise keep the calculated flux
+      TRUE ~ flux
+    )
+  ) %>%
+  select(-co2_p, -co2_flux, -bad_injection) %>%
+  ungroup()
 ```
 
 # Add coords to create final tidy output dataset
@@ -187,13 +213,13 @@ data %>%
   labs(x = expression(atop("GHG Flux", "("*mu*"mol CO"[2]*" m"^{-2}*" s"^{-1}*"), (nmol CH"[4]*" | N"[2]*"O m"^{-2}*" s"^{-1}*")")),
        y = "Density",
        fill = "Cover") +
-  scale_fill_viridis_d() %>% 
+  scale_fill_viridis_d(option = "magma") +
   theme(
     strip.background = element_blank(),
-    strip.text = element_text(
+    strip.text = element_text(),
     size = 12,
     face = "bold"
-  ))
+  )
 ggsave("paper-figures/fig1.png", height = 3, width = 8)
 ```
 
@@ -608,5 +634,24 @@ koyama %>%
   arrange(median_ch4_mg_ch4_c_m_2_day) %>% 
   mutate(median_ch4_g_ch4_c_m_2_yr = median_ch4_mg_ch4_c_m_2_day*365.25/1000,
          median_ch4_kg_ch4_c_m_2_yr = median_ch4_g_ch4_c_m_2_yr*10)
+```
+
+# Local met data
+```{r}
+read_csv("data/nach_temp_precip.csv") %>% 
+  mutate(year = year(day),
+         month = month(day)) %>% 
+  filter(year == 2024) %>% 
+  group_by(month) %>% 
+  summarize(mean_temp = mean((daily_mean_temp-32) * 5/9),
+            total_precip = sum(daily_total_precip*25.4, na.rm = T))
+```
+
+```{r}
+read_csv("data/nach_temp_precip.csv") %>% 
+  mutate(month = month(day)) %>% 
+  # group_by(month) %>% 
+  summarize(mean_temp = mean((daily_mean_temp-32) * 5/9),
+            total_precip = sum(daily_total_precip*25.4, na.rm = T))
 ```
 
