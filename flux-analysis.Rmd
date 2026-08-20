@@ -121,7 +121,56 @@ data %>%
   write_csv("2022-nachusa-fluxes.csv")
 ```
 
- 
+```{r detection-limit}
+# ============================================================
+# Lowest Detectable Flux for CH4 and N2O
+# ============================================================
+
+# ---- Instrument precision ----
+ch4_std_ppm    <- 10.1      # ppm
+n2o_std_ppm    <- 1.0       # ppm
+rel_precision  <- 0.02      # 2%
+
+ch4_precision_ppm <- ch4_std_ppm * rel_precision   # 0.303 ppm
+n2o_precision_ppm <- n2o_std_ppm * rel_precision   # 0.030 ppm
+
+# ---- Chamber parameters ----
+area_m2   <- 0.05          # m²
+height_m  <- 0.12          # m
+time_min  <- 30            # minutes
+time_s    <- time_min * 60
+
+# ---- Ideal gas conversion (ppm → nmol m⁻³) ----
+# At 1 atm and 25 °C:
+# 1 ppm = 40.87 µmol m⁻³ = 40870 nmol m⁻³
+R <- 0.082057              # L atm mol⁻¹ K⁻¹
+T <- 298.15                # K
+P <- 1                     # atm
+
+moles_per_m3     <- (P / (R * T)) * 1000          # mol m⁻³
+ppm_to_nmol_m3   <- moles_per_m3 * 1000           # nmol m⁻³ per ppm
+# ≈ 40870
+
+# ---- Minimum detectable flux ----
+# F (nmol m⁻² s⁻¹) = (ΔC_nmol_m3 / Δt_s) * height_m
+
+ch4_min_flux <- (ch4_precision_ppm * ppm_to_nmol_m3 / time_s) * height_m
+n2o_min_flux <- (n2o_precision_ppm * ppm_to_nmol_m3 / time_s) * height_m
+
+# ---- Results ----
+cat("=== Lowest Detectable Flux ===\n")
+cat(sprintf("CH4 precision          : %.3f ppm\n", ch4_precision_ppm))
+cat(sprintf("CH4 lowest detectable flux : %.3f nmol m⁻² s⁻¹\n\n", ch4_min_flux))
+
+cat(sprintf("N2O precision          : %.3f ppm\n", n2o_precision_ppm))
+cat(sprintf("N2O lowest detectable flux : %.3f nmol m⁻² s⁻¹\n", n2o_min_flux))
+
+cat("\nAssumptions used:\n")
+cat(sprintf("  Chamber area     = %.3f m²\n", area_m2))
+cat(sprintf("  Chamber height   = %.2f m\n", height_m))
+cat(sprintf("  Deployment time  = %.0f min\n", time_min))
+cat("  Temperature/pressure ≈ 25 °C, 1 atm\n")
+```
 
 # Data Summary
 
@@ -220,7 +269,7 @@ data %>%
     size = 12,
     face = "bold"
   )
-ggsave("paper-figures/fig1.png", height = 3, width = 8)
+ggsave("paper-figures/fig2.png", height = 3, width = 8)
 ```
 
 CO2 fluxes for woodlands are unimodal and peak at 2-3 (smallest source)
@@ -388,7 +437,7 @@ data %>%
     size = 12,
     face = "bold"
   ))
-ggsave("paper-figures/figS1.png", height = 3, width = 8)
+ggsave("paper-figures/figS2.png", height = 3, width = 8)
 ```
 
 # Use 3D plot -- only for exploration
@@ -564,7 +613,7 @@ R2_cv <- 1 - min(tree_pruned$cptable[, "xerror"])
 
 R2_train; R2_cv
 
-tree_pruned$variable.importance/45.840316
+tree_pruned$variable.importance/49.034475
 ```
 
 ```{r n2o-decision-tree}
