@@ -519,6 +519,7 @@ R2_train; R2_cv
 
 tree_pruned$variable.importance/244.0486
 ```
+
 nsplits = 6
 CO2 CV R2 = 1-0.28630 = 0.71
 Rel. Err. = 0.18
@@ -615,6 +616,24 @@ R2_train; R2_cv
 
 tree_pruned$variable.importance/49.034475
 ```
+# more within node stats (change tree by creating/re-creating `tree_pruned`)
+
+```{r}
+node_stats <- tree_pruned$frame %>%
+  tibble::rownames_to_column("node") %>%
+  filter(var == "<leaf>") %>%          # keep only terminal nodes
+  mutate(
+    n          = n,
+    mean       = yval,                 # predicted value (node mean)
+    sse        = dev,                  # sum of squared errors
+    variance   = dev / n,              # population variance
+    sd         = sqrt(dev / n),        # within-node standard deviation
+    se         = sd / sqrt(n)          # standard error of the mean
+  ) %>%
+  select(node, n, mean, sd, se)
+
+print(node_stats)
+```
 
 ```{r n2o-decision-tree}
 d <- data %>%
@@ -683,6 +702,20 @@ koyama %>%
   arrange(median_ch4_mg_ch4_c_m_2_day) %>% 
   mutate(median_ch4_g_ch4_c_m_2_yr = median_ch4_mg_ch4_c_m_2_day*365.25/1000,
          median_ch4_kg_ch4_c_m_2_yr = median_ch4_g_ch4_c_m_2_yr*10)
+
+koyama %>% 
+  group_by(plot_id) %>% 
+  summarize(q25_ch4_mg_ch4_c_m_2_day = quantile(ch4_mg_ch4_c_m_2_day, 0.25, na.rm=T)) %>% 
+  arrange(q25_ch4_mg_ch4_c_m_2_day) %>% 
+  mutate(q25_ch4_g_ch4_c_m_2_yr = q25_ch4_mg_ch4_c_m_2_day*365.25/1000,
+        q25_ch4_kg_ch4_c_m_2_yr = q25_ch4_g_ch4_c_m_2_yr*10)
+
+koyama %>% 
+  group_by(plot_id) %>% 
+  summarize(q75_ch4_mg_ch4_c_m_2_day = quantile(ch4_mg_ch4_c_m_2_day, 0.75, na.rm=T)) %>% 
+  arrange(q75_ch4_mg_ch4_c_m_2_day) %>% 
+  mutate(q75_ch4_g_ch4_c_m_2_yr = q75_ch4_mg_ch4_c_m_2_day*365.25/1000,
+        q75_ch4_kg_ch4_c_m_2_yr = q75_ch4_g_ch4_c_m_2_yr*10)
 ```
 
 # Local met data
